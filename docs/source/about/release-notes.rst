@@ -34,6 +34,7 @@ v0.9.0
 * Support for request-scoped configuration for Jersey client  `#939 <https://github.com/dropwizard/dropwizard/pull/939>`_
 * Respecting Jackson feature for deserializing enums using ``toString`` `#1104 <https://github.com/dropwizard/dropwizard/pull/1104>`_
 * Support for passing explicit ``Configuration`` via test rules `#1131 <https://github.com/dropwizard/dropwizard/pull/1131>`_
+* On view template error, return a generic error page instead of template not found `#1178 <https://github.com/dropwizard/dropwizard/pull/1178>`_
 * Improved build time build by running tests in parallel `#1032 <https://github.com/dropwizard/dropwizard/pull/1032>`_
 * Added JMH benchmarks  `#990 <https://github.com/dropwizard/dropwizard/pull/990>`_
 * Removed javax.el-2.x in favour of javax.el-3.0
@@ -49,6 +50,7 @@ v0.9.0
 * Upgraded to Jadira Usertype Core 4.0.0.GA
 * Upgraded to Jersey 2.21
 * Upgraded to Jetty 9.2.13.v20150730
+* Upgraded to Hibernate Validator 5.2.1.Final
 * Upgraded to Jetty ALPN boot 7.1.3.v20150130
 * Upgraded to Jetty SetUID support 1.0.3
 * Upgraded to Liquibase 3.4.1
