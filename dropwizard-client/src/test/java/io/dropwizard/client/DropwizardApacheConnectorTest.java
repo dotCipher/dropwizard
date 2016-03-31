@@ -5,41 +5,50 @@ import com.codahale.metrics.health.HealthCheck;
 import io.dropwizard.Application;
 import io.dropwizard.Configuration;
 import io.dropwizard.jackson.Jackson;
+import io.dropwizard.jersey.validation.Validators;
 import io.dropwizard.setup.Environment;
 import io.dropwizard.testing.ResourceHelpers;
 import io.dropwizard.testing.junit.DropwizardAppRule;
 import io.dropwizard.util.Duration;
+import org.apache.http.Header;
 import org.apache.http.HttpStatus;
+import org.apache.http.ProtocolVersion;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.conn.ConnectTimeoutException;
 import org.apache.http.conn.HttpHostConnectException;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.message.BasicHeader;
+import org.apache.http.message.BasicStatusLine;
 import org.assertj.core.api.AbstractLongAssert;
 import org.eclipse.jetty.util.component.LifeCycle;
 import org.glassfish.jersey.client.ClientProperties;
+import org.glassfish.jersey.client.ClientRequest;
+import org.glassfish.jersey.client.ClientResponse;
 import org.glassfish.jersey.client.JerseyClient;
-import org.junit.Before;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.mockito.Matchers;
 
-import javax.validation.Validation;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.ProcessingException;
-import javax.ws.rs.client.Client;
 import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.Response;
 import java.net.NoRouteToHostException;
 import java.net.SocketTimeoutException;
 import java.net.URI;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.CoreMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @Ignore //These tests are consistently failing on travis CI because of network timeouts
 public class DropwizardApacheConnectorTest {
@@ -70,7 +79,7 @@ public class DropwizardApacheConnectorTest {
         clientConfiguration.setTimeout(Duration.milliseconds(DEFAULT_CONNECT_TIMEOUT_IN_MILLIS));
 
         environment = new Environment("test-dropwizard-apache-connector", Jackson.newObjectMapper(),
-                Validation.buildDefaultValidatorFactory().getValidator(), new MetricRegistry(),
+                Validators.newValidator(), new MetricRegistry(),
                 getClass().getClassLoader());
         client = (JerseyClient) new JerseyClientBuilder(environment)
                 .using(clientConfiguration)
@@ -166,6 +175,32 @@ public class DropwizardApacheConnectorTest {
                     .get(String.class);
             assertThat(response).isEqualTo("success");
         }
+    }
+
+    @Test
+    public void multiple_headers_with_the_same_name_are_processed_successfully() throws Exception {
+
+        final CloseableHttpClient client = mock(CloseableHttpClient.class);
+        final DropwizardApacheConnector dropwizardApacheConnector = new DropwizardApacheConnector(client, null, false);
+        final Header[] apacheHeaders = {
+            new BasicHeader("Set-Cookie", "test1"),
+            new BasicHeader("Set-Cookie", "test2")
+        };
+
+        final CloseableHttpResponse apacheResponse = mock(CloseableHttpResponse.class);
+        when(apacheResponse.getStatusLine()).thenReturn(new BasicStatusLine(new ProtocolVersion("HTTP", 1, 1), 200, "OK"));
+        when(apacheResponse.getAllHeaders()).thenReturn(apacheHeaders);
+        when(client.execute(Matchers.any())).thenReturn(apacheResponse);
+
+        final ClientRequest jerseyRequest = mock(ClientRequest.class);
+        when(jerseyRequest.getUri()).thenReturn(URI.create("http://localhost"));
+        when(jerseyRequest.getMethod()).thenReturn("GET");
+        when(jerseyRequest.getHeaders()).thenReturn(new MultivaluedHashMap<>());
+
+        final ClientResponse jerseyResponse = dropwizardApacheConnector.apply(jerseyRequest);
+
+        assertThat(jerseyResponse.getStatus()).isEqualTo(apacheResponse.getStatusLine().getStatusCode());
+
     }
 
     @Path("/")

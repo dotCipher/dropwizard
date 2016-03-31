@@ -35,7 +35,7 @@ password is ``secret``, authenticates the client as a ``User`` with the client-p
 If the password doesn't match, an absent ``Optional`` is returned instead, indicating that the
 credentials are invalid.
 
-.. warning:: It's important for authentication services to not provide too much information in their
+.. warning:: It's important for authentication services not to provide too much information in their
              errors. The fact that a username or email has an account may be meaningful to an
              attacker, so the ``Authenticator`` interface doesn't allow you to distinguish between
              a bad username and a bad password. You should only throw an ``AuthenticationException``
@@ -162,7 +162,7 @@ The ``ChainedAuthFilter`` enables usage of various authentication factories at t
                 .buildAuthFilter();
 
         List<AuthFilter> filters = Lists.newArrayList(basicCredentialAuthFilter, oauthCredentialAuthFilter);
-        environment.jersey().register(new AuthDynamicFeature(new ChainedAuthFilter(handlers)));
+        environment.jersey().register(new AuthDynamicFeature(new ChainedAuthFilter(filters)));
         environment.jersey().register(RolesAllowedDynamicFeature.class);
         //If you want to use @Auth to inject a custom Principal type into your resource
         environment.jersey().register(new AuthValueFactoryProvider.Binder<>(User.class));
@@ -179,8 +179,11 @@ Protecting Resources
 There are two ways to protect a resource.  You can mark your resource method with one of the following annotations:
 
 * ``@PermitAll``. All authenticated users will have access to the method.
-* ``@RolesAllowed``. Access will be granted for the users with the specified roles.
+* ``@RolesAllowed``. Access will be granted to the users with the specified roles.
 * ``@DenyAll``. No access will be granted to anyone.
+
+.. note::
+    You can use ``@RolesAllowed``,``@PermitAll`` on the class level. Method annotations take precedence over the class ones.
 
 Alternatively, you can annotate the parameter representing your principal with ``@Auth``. Note you must register a
 jersey provider to make this work.
@@ -252,25 +255,32 @@ When you build your ``ResourceTestRule``, add the ``GrizzlyWebTestContainerFacto
 .. code-block:: java
 
     @Rule
-    ResourceTestRule rule = ResourceTestRule
+    public ResourceTestRule rule = ResourceTestRule
             .builder()
             .setTestContainerFactory(new GrizzlyWebTestContainerFactory())
-            .addProvider(AuthFactory.binder(new BasicAuthProvider<>(new ExampleAuthenticator(), "SUPER SECRET STUFF")))
-            .addResource(...)
+            .addProvider(new AuthDynamicFeature(new OAuthCredentialAuthFilter.Builder<User>()
+                    .setAuthenticator(new MyOAuthAuthenticator())
+                    .setAuthorizer(new MyAuthorizer())
+                    .setRealm("SUPER SECRET STUFF")
+                    .setPrefix("Bearer")
+                    .buildAuthFilter()))
+            .addProvider(RolesAllowedDynamicFeature.class)
+            .addProvider(new AuthValueFactoryProvider.Binder<>(User.class))
+            .addResource(new ProtectedResource())
             .build();
 
-In this example we are testing the basic authentication so we need to set the header manually. Note the use of ``resources.getJerseyTest()`` to make the test work
+
+In this example, we are testing the oauth authentication, so we need to set the header manually. Note the use of ``resources.getJerseyTest()`` to make the test work
 
 .. code-block:: java
-        import java.nio.charset.StandardCharsets;
-        import org.apache.commons.codec.binary.Base64;
 
+    @Test
+    public void testProtected() throws Exception {
+        final Response response = rule.getJerseyTest().target("/protected")
+                .request(MediaType.APPLICATION_JSON_TYPE)
+                .header("Authorization", "Bearer TOKEN")
+                .get();
 
-        String authorizationHeader = "Basic " + new String(
-                Base64.encodeBase64("test@test.com:test".getBytes())), StandardCharsets.US_ASCII);
-        Builder builder = resources.getJerseyTest().target("/entities")
-                .request()
-                .header(Header.Authorization.name(), authorizationHeader);
-        Response response = builder.post(Entity.json(entity));
-        Assertions.assertThat(response.getStatus()).isEqualTo(
-                Status.CREATED.getStatusCode());
+        assertThat(response.getStatus()).isEqualTo(200);
+    }
+

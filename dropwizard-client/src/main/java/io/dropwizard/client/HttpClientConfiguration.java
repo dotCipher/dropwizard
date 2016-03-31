@@ -1,21 +1,22 @@
 package io.dropwizard.client;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import io.dropwizard.client.proxy.ProxyConfiguration;
 import io.dropwizard.client.ssl.TlsConfiguration;
 import io.dropwizard.util.Duration;
+import org.hibernate.validator.valuehandling.UnwrapValidatedValue;
 
 import javax.annotation.Nullable;
 import javax.validation.Valid;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
+import java.util.Optional;
 
 /**
  * The configuration class used by {@link HttpClientBuilder}.
  *
- * @see <a href="http://dropwizard.io/manual/configuration.html#httpclient">Http Client Configuration</a>
+ * @see <a href="http://dropwizard.io/0.9.1/docs/manual/configuration.html#httpclient">Http Client Configuration</a>
  */
 public class HttpClientConfiguration {
     @NotNull
@@ -48,7 +49,8 @@ public class HttpClientConfiguration {
     private int retries = 0;
 
     @NotNull
-    private Optional<String> userAgent = Optional.absent();
+    @UnwrapValidatedValue(false)
+    private Optional<String> userAgent = Optional.empty();
 
     @Valid
     @Nullable

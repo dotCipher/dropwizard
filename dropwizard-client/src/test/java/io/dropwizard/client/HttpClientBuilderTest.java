@@ -4,7 +4,6 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.httpclient.HttpClientMetricNameStrategies;
 import com.codahale.metrics.httpclient.InstrumentedHttpClientConnectionManager;
 import com.codahale.metrics.httpclient.InstrumentedHttpRequestExecutor;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import io.dropwizard.client.proxy.AuthConfiguration;
 import io.dropwizard.client.proxy.ProxyConfiguration;
@@ -17,15 +16,19 @@ import org.apache.http.Header;
 import org.apache.http.HeaderIterator;
 import org.apache.http.HttpHeaders;
 import org.apache.http.HttpHost;
+import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
+import org.apache.http.ProtocolException;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.Credentials;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.HttpRequestRetryHandler;
+import org.apache.http.client.RedirectStrategy;
 import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
 import org.apache.http.config.SocketConfig;
@@ -60,6 +63,7 @@ import java.net.ProxySelector;
 import java.net.SocketAddress;
 import java.net.URI;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
@@ -295,12 +299,7 @@ public class HttpClientBuilderTest {
 
     @Test
     public void usesACustomHttpRequestRetryHandler() throws Exception {
-        final HttpRequestRetryHandler customHandler = new HttpRequestRetryHandler() {
-            @Override
-            public boolean retryRequest(IOException exception, int executionCount, HttpContext context) {
-                return false;
-            }
-        };
+        final HttpRequestRetryHandler customHandler = (exception, executionCount, context) -> false;
 
         configuration.setRetries(1);
         assertThat(builder.using(configuration).using(customHandler)
@@ -406,7 +405,7 @@ public class HttpClientBuilderTest {
 
         return httpClient;
     }
-    
+
     @Test
     public void setValidateAfterInactivityPeriodFromConfiguration() throws Exception {
         int validateAfterInactivityPeriod = 50000;
@@ -449,6 +448,19 @@ public class HttpClientBuilderTest {
     }
 
     @Test
+    public void disablesContentCompression() throws Exception {
+        ConfiguredCloseableHttpClient client = builder
+                .disableContentCompression(true)
+                .createClient(apacheBuilder, connectionManager, "test");
+        assertThat(client).isNotNull();
+
+        final Boolean contentCompressionDisabled = (Boolean) FieldUtils
+                .getField(httpClientBuilderClass, "contentCompressionDisabled", true)
+                .get(apacheBuilder);
+        assertThat(contentCompressionDisabled).isTrue();
+    }
+
+    @Test
     public void managedByEnvironment() throws Exception {
         final Environment environment = mock(Environment.class);
         when(environment.getName()).thenReturn("test-env");
@@ -471,6 +483,47 @@ public class HttpClientBuilderTest {
         final Managed managed = argumentCaptor.getValue();
         managed.stop();
         verify(httpClient).close();
+    }
+
+    @Test
+    public void usesACustomRedirectStrategy() throws Exception {
+        RedirectStrategy neverFollowRedirectStrategy = new RedirectStrategy() {
+            @Override
+            public boolean isRedirected(HttpRequest httpRequest,
+                                        HttpResponse httpResponse,
+                                        HttpContext httpContext) throws ProtocolException {
+                return false;
+            }
+
+            @Override
+            public HttpUriRequest getRedirect(HttpRequest httpRequest,
+                                              HttpResponse httpResponse,
+                                              HttpContext httpContext) throws ProtocolException {
+                return null;
+            }
+        };
+        ConfiguredCloseableHttpClient client = builder.using(neverFollowRedirectStrategy)
+                                                      .createClient(apacheBuilder, connectionManager, "test");
+        assertThat(client).isNotNull();
+        assertThat(spyHttpClientBuilderField("redirectStrategy", apacheBuilder)).isSameAs(neverFollowRedirectStrategy);
+    }
+
+    @Test
+    public void usesDefaultHeaders() throws Exception {
+        final ConfiguredCloseableHttpClient client =
+                builder.using(ImmutableList.of(new BasicHeader(HttpHeaders.ACCEPT_LANGUAGE, "de")))
+                        .createClient(apacheBuilder, connectionManager, "test");
+        assertThat(client).isNotNull();
+
+        @SuppressWarnings("unchecked")
+        List<? extends Header> defaultHeaders = (List<? extends Header>) FieldUtils
+                .getField(httpClientBuilderClass, "defaultHeaders", true)
+                .get(apacheBuilder);
+
+        assertThat(defaultHeaders).hasSize(1);
+        final Header header = defaultHeaders.get(0);
+        assertThat(header.getName()).isEqualTo(HttpHeaders.ACCEPT_LANGUAGE);
+        assertThat(header.getValue()).isEqualTo("de");
     }
 
     private Object spyHttpClientBuilderField(final String fieldName, final Object obj) throws Exception {

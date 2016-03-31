@@ -1,7 +1,9 @@
 Dropwizard
 ==========
-[![Build Status](https://travis-ci.org/dropwizard/dropwizard.png?branch=master)](https://travis-ci.org/dropwizard/dropwizard)
+[![Build Status](https://travis-ci.org/dropwizard/dropwizard.svg?branch=master)](https://travis-ci.org/dropwizard/dropwizard)
 [![Coverage Status](https://img.shields.io/coveralls/dropwizard/dropwizard.svg)](https://coveralls.io/r/dropwizard/dropwizard)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.dropwizard/dropwizard-core/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.dropwizard/dropwizard-core/)
+[![Javadoc](https://javadoc-emblem.rhcloud.com/doc/io.dropwizard/dropwizard-core/badge.svg)](http://www.javadoc.io/doc/io.dropwizard/dropwizard-core)
 
 *Dropwizard is a sneaky way of making fast Java web applications.*
 
@@ -10,11 +12,11 @@ historically not sucked:
 
 * [Jetty](http://www.eclipse.org/jetty/) for HTTP servin'.
 * [Jersey](http://jersey.java.net/) for REST modelin'.
-* [Jackson](http://jackson.codehaus.org) for JSON parsin' and generatin'.
+* [Jackson](https://github.com/FasterXML/jackson) for JSON parsin' and generatin'.
 * [Logback](http://logback.qos.ch/) for loggin'.
-* [Hibernate Validator](http://www.hibernate.org/subprojects/validator.html) for validatin'.
-* [Metrics](http://metrics.codahale.com) for figurin' out what your application is doin' in production.
-* [JDBI](http://www.jdbi.org) and [Hibernate](http://www.hibernate.org/) for databasin'.
+* [Hibernate Validator](http://hibernate.org/validator/) for validatin'.
+* [Metrics](http://metrics.dropwizard.io) for figurin' out what your application is doin' in production.
+* [JDBI](http://www.jdbi.org) and [Hibernate](http://www.hibernate.org/orm/) for databasin'.
 * [Liquibase](http://www.liquibase.org/) for migratin'.
 
 Read more at [dropwizard.io](http://www.dropwizard.io).

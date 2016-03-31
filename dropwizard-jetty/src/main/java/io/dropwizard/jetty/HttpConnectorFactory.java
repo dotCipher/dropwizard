@@ -1,7 +1,6 @@
 package io.dropwizard.jetty;
 
 import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.jetty9.InstrumentedConnectionFactory;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import io.dropwizard.util.Duration;
@@ -12,7 +11,13 @@ import io.dropwizard.validation.MinSize;
 import io.dropwizard.validation.PortRange;
 import org.eclipse.jetty.io.ArrayByteBufferPool;
 import org.eclipse.jetty.io.ByteBufferPool;
-import org.eclipse.jetty.server.*;
+import org.eclipse.jetty.server.Connector;
+import org.eclipse.jetty.server.ConnectionFactory;
+import org.eclipse.jetty.server.ForwardedRequestCustomizer;
+import org.eclipse.jetty.server.HttpConfiguration;
+import org.eclipse.jetty.server.HttpConnectionFactory;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.util.thread.ScheduledExecutorScheduler;
 import org.eclipse.jetty.util.thread.Scheduler;
 import org.eclipse.jetty.util.thread.ThreadPool;
@@ -43,6 +48,15 @@ import static com.codahale.metrics.MetricRegistry.name;
  *         <td>{@code bindHost}</td>
  *         <td>(none)</td>
  *         <td>The hostname to bind to.</td>
+ *     </tr>
+ *     <tr>
+ *         <td>{@code inheritChannel}</td>
+ *         <td>false</td>
+ *         <td>
+ *             Whether this connector uses a channel inherited from the JVM.
+ *             Use it with <a href="https://github.com/kazuho/p5-Server-Starter">Server::Starter</a>,
+ *             to launch an instance of Jetty on demand.
+ *         </td>
  *     </tr>
  *     <tr>
  *         <td>{@code headerCacheSize}</td>
@@ -180,6 +194,8 @@ public class HttpConnectorFactory implements ConnectorFactory {
 
     private String bindHost = null;
 
+    private boolean inheritChannel = false;
+
     @NotNull
     @MinSize(128)
     private Size headerCacheSize = Size.bytes(512);
@@ -249,6 +265,16 @@ public class HttpConnectorFactory implements ConnectorFactory {
     @JsonProperty
     public void setBindHost(String bindHost) {
         this.bindHost = bindHost;
+    }
+
+    @JsonProperty
+    public boolean isInheritChannel() {
+        return inheritChannel;
+    }
+
+    @JsonProperty
+    public void setInheritChannel(boolean inheritChannel) {
+        this.inheritChannel = inheritChannel;
     }
 
     @JsonProperty
@@ -435,7 +461,7 @@ public class HttpConnectorFactory implements ConnectorFactory {
         final ByteBufferPool bufferPool = buildBufferPool();
 
         return buildConnector(server, scheduler, bufferPool, name, threadPool,
-                              new InstrumentedConnectionFactory(httpConnectionFactory,
+                              new Jetty93InstrumentedConnectionFactory(httpConnectionFactory,
                                                                 metrics.timer(httpConnections())));
     }
 
@@ -461,6 +487,7 @@ public class HttpConnectorFactory implements ConnectorFactory {
                                                               factories);
         connector.setPort(port);
         connector.setHost(bindHost);
+        connector.setInheritChannel(inheritChannel);
         if (acceptQueueSize != null) {
             connector.setAcceptQueueSize(acceptQueueSize);
         }

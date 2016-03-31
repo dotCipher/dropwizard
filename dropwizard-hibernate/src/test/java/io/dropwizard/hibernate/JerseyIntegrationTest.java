@@ -1,7 +1,6 @@
 package io.dropwizard.hibernate;
 
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import io.dropwizard.db.DataSourceFactory;
 import io.dropwizard.jackson.Jackson;
@@ -21,13 +20,13 @@ import org.joda.time.DateTimeZone;
 import org.junit.After;
 import org.junit.Test;
 
-import javax.validation.Validation;
 import javax.ws.rs.*;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.Application;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.failBecauseExceptionWasNotThrown;
@@ -45,7 +44,7 @@ public class JerseyIntegrationTest extends JerseyTest {
         }
 
         public Optional<Person> findByName(String name) {
-            return Optional.fromNullable(get(name));
+            return Optional.ofNullable(get(name));
         }
 
         @Override
@@ -125,10 +124,9 @@ public class JerseyIntegrationTest extends JerseyTest {
         }
 
         final DropwizardResourceConfig config = DropwizardResourceConfig.forTesting(new MetricRegistry());
-        config.register(new UnitOfWorkApplicationListener(sessionFactory));
+        config.register(new UnitOfWorkApplicationListener("hr-db", sessionFactory));
         config.register(new PersonResource(new PersonDAO(sessionFactory)));
-        config.register(new JacksonMessageBodyProvider(Jackson.newObjectMapper(),
-                                                       Validation.buildDefaultValidatorFactory().getValidator()));
+        config.register(new JacksonMessageBodyProvider(Jackson.newObjectMapper()));
         config.register(new DataExceptionMapper());
 
         return config;
@@ -136,8 +134,7 @@ public class JerseyIntegrationTest extends JerseyTest {
 
     @Override
     protected void configureClient(ClientConfig config) {
-        config.register(new JacksonMessageBodyProvider(Jackson.newObjectMapper(),
-                Validation.buildDefaultValidatorFactory().getValidator()));
+        config.register(new JacksonMessageBodyProvider(Jackson.newObjectMapper()));
     }
 
     @Test

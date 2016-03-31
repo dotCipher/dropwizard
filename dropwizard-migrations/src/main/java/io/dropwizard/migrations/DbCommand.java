@@ -1,6 +1,5 @@
 package io.dropwizard.migrations;
 
-import com.google.common.collect.Maps;
 import io.dropwizard.Configuration;
 import io.dropwizard.db.DatabaseConfiguration;
 import liquibase.Liquibase;
@@ -8,14 +7,15 @@ import net.sourceforge.argparse4j.inf.Namespace;
 import net.sourceforge.argparse4j.inf.Subparser;
 
 import java.util.SortedMap;
+import java.util.TreeMap;
 
 public class DbCommand<T extends Configuration> extends AbstractLiquibaseCommand<T> {
     private static final String COMMAND_NAME_ATTR = "subcommand";
     private final SortedMap<String, AbstractLiquibaseCommand<T>> subcommands;
 
-    public DbCommand(DatabaseConfiguration<T> strategy, Class<T> configurationClass) {
-        super("db", "Run database migration tasks", strategy, configurationClass);
-        this.subcommands = Maps.newTreeMap();
+    public DbCommand(String name, DatabaseConfiguration<T> strategy, Class<T> configurationClass) {
+        super(name, "Run database migration tasks", strategy, configurationClass);
+        this.subcommands = new TreeMap<>();
         addSubcommand(new DbCalculateChecksumCommand<>(strategy, configurationClass));
         addSubcommand(new DbClearChecksumsCommand<>(strategy, configurationClass));
         addSubcommand(new DbDropAllCommand<>(strategy, configurationClass));

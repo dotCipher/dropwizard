@@ -7,7 +7,12 @@ import io.dropwizard.util.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.*;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.RejectedExecutionHandler;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
 
 public class ExecutorServiceBuilder {
     private static Logger log = LoggerFactory.getLogger(ExecutorServiceBuilder.class);
@@ -26,7 +31,7 @@ public class ExecutorServiceBuilder {
         this.environment = environment;
         this.nameFormat = nameFormat;
         this.corePoolSize = 0;
-        this.maximumPoolSize = Integer.MAX_VALUE;
+        this.maximumPoolSize = 1;
         this.keepAliveTime = Duration.seconds(60);
         this.shutdownTime = Duration.seconds(5);
         this.workQueue = new LinkedBlockingQueue<>();
@@ -70,7 +75,7 @@ public class ExecutorServiceBuilder {
     }
 
     public ExecutorService build() {
-        if (maximumPoolSize != Integer.MAX_VALUE && !isBoundedQueue()) {
+        if (corePoolSize != maximumPoolSize && maximumPoolSize > 1 && !isBoundedQueue()) {
             log.warn("Parameter 'maximumPoolSize' is conflicting with unbounded work queues");
         }
         final ThreadPoolExecutor executor = new ThreadPoolExecutor(corePoolSize,
@@ -89,7 +94,7 @@ public class ExecutorServiceBuilder {
     }
 
     @VisibleForTesting
-    static void setLog(Logger newLog) {
+    static synchronized void setLog(Logger newLog) {
        log = newLog;
     }
 }

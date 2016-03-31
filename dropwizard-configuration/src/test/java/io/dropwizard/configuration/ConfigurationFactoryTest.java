@@ -3,30 +3,34 @@ package io.dropwizard.configuration;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.io.Resources;
 import io.dropwizard.jackson.Jackson;
+import io.dropwizard.validation.BaseValidator;
 import org.assertj.core.data.MapEntry;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import javax.validation.Validation;
 import javax.validation.Validator;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
 import java.io.File;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.fail;
 import static org.assertj.core.api.Assertions.failBecauseExceptionWasNotThrown;
 
 public class ConfigurationFactoryTest {
+
+    private static final String NEWLINE = System.lineSeparator();
 
     @SuppressWarnings("UnusedDeclaration")
     public static class ExampleServer {
@@ -59,10 +63,12 @@ public class ConfigurationFactoryTest {
         List<String> type;
 
         @JsonProperty
-        private Map<String, String> properties = Maps.newLinkedHashMap();
+        private Map<String, String> properties = new LinkedHashMap<>();
 
         @JsonProperty
-        private List<ExampleServer> servers = Lists.newArrayList();
+        private List<ExampleServer> servers = new ArrayList<>();
+
+        private boolean admin;
 
         public String getName() {
             return name;
@@ -80,6 +86,13 @@ public class ConfigurationFactoryTest {
             return servers;
         }
 
+        public boolean isAdmin() {
+            return admin;
+        }
+
+        public void setAdmin(boolean admin) {
+            this.admin = admin;
+        }
     }
 
     static class ExampleWithDefaults {
@@ -110,13 +123,17 @@ public class ConfigurationFactoryTest {
         }
     }
 
-    private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
+    private final Validator validator = BaseValidator.newValidator();
     private final ConfigurationFactory<Example> factory =
             new ConfigurationFactory<>(Example.class, validator, Jackson.newObjectMapper(), "dw");
     private File malformedFile;
     private File emptyFile;
     private File invalidFile;
     private File validFile;
+
+    private static File resourceFileName(String resourceName) throws URISyntaxException {
+        return new File(Resources.getResource(resourceName).toURI());
+    }
 
     @After
     public void resetConfigOverrides() {
@@ -130,10 +147,10 @@ public class ConfigurationFactoryTest {
 
     @Before
     public void setUp() throws Exception {
-        this.malformedFile = new File(Resources.getResource("factory-test-malformed.yml").toURI());
-        this.emptyFile = new File(Resources.getResource("factory-test-empty.yml").toURI());
-        this.invalidFile = new File(Resources.getResource("factory-test-invalid.yml").toURI());
-        this.validFile = new File(Resources.getResource("factory-test-valid.yml").toURI());
+        this.malformedFile = resourceFileName("factory-test-malformed.yml");
+        this.emptyFile = resourceFileName("factory-test-empty.yml");
+        this.invalidFile = resourceFileName("factory-test-invalid.yml");
+        this.validFile = resourceFileName("factory-test-valid.yml");
     }
 
     @Test
@@ -368,5 +385,55 @@ public class ConfigurationFactoryTest {
                     "'io.dropwizard.configuration.ConfigurationFactoryTest.NonInsatiableExample'");
         }
 
+    }
+
+    @Test
+    public void printsDidYouMeanOnUnrecognizedField() throws Exception {
+        final File resourceFileName = resourceFileName("factory-test-typo.yml");
+        try {
+            factory.build(resourceFileName);
+            fail("Typo in a configuration should be caught");
+        } catch (ConfigurationParsingException e) {
+            assertThat(e.getMessage()).isEqualTo(resourceFileName + " has an error:" + NEWLINE +
+                    "  * Unrecognized field at: propertis" + NEWLINE +
+                    "    Did you mean?:" + NEWLINE +
+                    "      - properties" + NEWLINE +
+                    "      - servers" + NEWLINE +
+                    "      - type" + NEWLINE +
+                    "      - name" + NEWLINE +
+                    "      - age" + NEWLINE +
+                    "        [1 more]" + NEWLINE);
+        }
+    }
+
+    @Test
+    public void incorrectTypeIsFound() throws Exception {
+        final File resourceFileName = resourceFileName("factory-test-wrong-type.yml");
+        try {
+            factory.build(resourceFileName);
+            fail("Incorrect type in a configuration should be found");
+        } catch (ConfigurationParsingException e) {
+            assertThat(e.getMessage()).isEqualTo(resourceFileName + " has an error:" + NEWLINE +
+                    "  * Incorrect type of value at: age; is of type: String, expected: int" + NEWLINE);
+        }
+    }
+
+    @Test
+    public void printsDetailedInformationOnMalformedYaml() throws Exception {
+        final File resourceFileName = resourceFileName("factory-test-malformed-advanced.yml");
+        try {
+            factory.build(resourceFileName);
+            fail("Should print a detailed error on a malformed YAML file");
+        } catch (Exception e) {
+            assertThat(e.getMessage()).isEqualTo(
+                    "YAML decoding problem: while parsing a flow sequence\n" +
+                    " in 'reader', line 2, column 7:\n" +
+                    "    type: [ coder,wizard\n" +
+                    "          ^\n" +
+                    "expected ',' or ']', but got StreamEnd\n" +
+                    " in 'reader', line 2, column 21:\n" +
+                    "    wizard\n" +
+                    "          ^" + NEWLINE);
+        }
     }
 }

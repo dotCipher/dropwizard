@@ -54,7 +54,7 @@ shutdownGracePeriod                 30 seconds                                  
                                                                                      to cleanly shutdown before forcibly terminating them.
 allowedMethods                      ``GET``, ``POST``, ``PUT``, ``DELETE``,          The set of allowed HTTP methods. Others will be rejected with a
                                     ``HEAD``, ``OPTIONS``, ``PATCH``                 405 Method Not Allowed response.
-rootPath                            ``/*``                                            The URL pattern relative to ``applicationContextPath`` from which
+rootPath                            ``/*``                                           The URL pattern relative to ``applicationContextPath`` from which
                                                                                      the JAX-RS resources will be served.
 registerDefaultExceptionMappers     true                                             Whether or not the default Jersey ExceptionMappers should be registered.
                                                                                      Set this to false if you want to register your own.
@@ -69,7 +69,7 @@ GZip
 .. code-block:: yaml
 
     server:
-      gzip: 
+      gzip:
         bufferSize: 8KiB
 
 
@@ -84,8 +84,6 @@ GZip
 +---------------------------+---------------------+------------------------------------------------------------------------------------------------------+
 | bufferSize                | 8KiB                | The size of the buffer to use when compressing.                                                      |
 +---------------------------+---------------------+------------------------------------------------------------------------------------------------------+
-| excludedUserAgents        | []                  | The set of user agents to exclude from compression.                                                  |
-+---------------------------+---------------------+------------------------------------------------------------------------------------------------------+
 | excludedUserAgentPatterns | []                  | The set of user agent patterns to exclude from compression.                                          |
 +---------------------------+---------------------+------------------------------------------------------------------------------------------------------+
 | compressedMimeTypes       | Jetty's default     | The list of mime types to compress. The default is all types apart                                   |
@@ -95,11 +93,7 @@ GZip
 +---------------------------+---------------------+------------------------------------------------------------------------------------------------------+
 | deflateCompressionLevel   | -1                  | The compression level used for ZLIB deflation(compression).                                          |
 +---------------------------+---------------------+------------------------------------------------------------------------------------------------------+
-| gzipCompatibleDeflation   | true                | If true, then ZLIB deflation(compression) will be performed in the GZIP-compatible mode.             |
-+---------------------------+---------------------+------------------------------------------------------------------------------------------------------+
 | gzipCompatibleInflation   | true                | If true, then ZLIB inflation(decompression) will be performed in the GZIP-compatible mode.           |
-+---------------------------+---------------------+------------------------------------------------------------------------------------------------------+
-| vary                      | ``Accept-Encoding`` | Value of the `Vary` header sent with responses that could be compressed.                             |
 +---------------------------+---------------------+------------------------------------------------------------------------------------------------------+
 
 
@@ -111,7 +105,7 @@ Request Log
 .. code-block:: yaml
 
     server:
-      requestLog: 
+      requestLog:
         timeZone: UTC
 
 
@@ -122,6 +116,44 @@ timeZone               UTC              The time zone to which request timestamp
 appenders              console appender The set of AppenderFactory appenders to which requests will be logged.
                                         *TODO* See logging/appender refs for more info
 ====================== ================ ===========
+
+.. _man-configuration-server-push:
+
+Server Push
+...........
+
+Server push technology allows a server to send additional resources to a client along with the requested resource.
+It works only for HTTP/2 connections.
+
+.. code-block:: yaml
+
+    server:
+      serverPush:
+        enabled: true
+        associatePeriod: '4 seconds'
+        maxAssociations: 16
+        refererHosts: ['dropwizard.io', 'dropwizard.github.io']
+        refererPorts: [8444, 8445]
+
+
++-----------------+------------+------------------------------------------------------------------------------------------------------+
+|     Name        | Default    | Description                                                                                          |
++=================+============+======================================================================================================+
+| enabled         | false      | If true, the filter will organize resources as primary resources (those referenced by the            |
+|                 |            | ``Referer`` header) and secondary resources (those that have the ``Referer`` header). Secondary      |
+|                 |            | resources that have been requested within a time window from the request of the primary resource     |
+|                 |            | will be associated with the it. The next time a client will request the primary resource, the        |
+|                 |            | server will send to the client the secondary resources along with the primary in a single response.  |
++-----------------+------------+------------------------------------------------------------------------------------------------------+
+| associatePeriod | 4 seconds  | The time window within which a request for a secondary resource will be associated to a              |
+|                 |            | primary resource..                                                                                   |
++-----------------+------------+------------------------------------------------------------------------------------------------------+
+| maxAssociations | 16         | The maximum number of secondary resources that may be associated to a primary resource.              |
++-----------------+------------+------------------------------------------------------------------------------------------------------+
+| refererHosts    | All hosts  | The list of referrer hosts for which the server push technology is supported.                        |
++-----------------+------------+------------------------------------------------------------------------------------------------------+
+| refererPorts    | All ports  | The list of referrer ports for which the server push technology is supported                         |
++-----------------+------------+------------------------------------------------------------------------------------------------------+
 
 
 .. _man-configuration-simple:
@@ -192,7 +224,7 @@ Name                      Default                   Description
 applicationConnectors     An `HTTP connector`_      A set of :ref:`connectors <man-configuration-connectors>` which will
                           listening on port 8080.   handle application requests.
 adminConnectors           An `HTTP connector`_      An `HTTP connector`_ listening on port 8081.
-                          listening on port 8081.   A set of :ref:`connectors <man-configuration-connectors>` which will 
+                          listening on port 8081.   A set of :ref:`connectors <man-configuration-connectors>` which will
                                                     handle admin requests.
 adminMinThreads           1                         The minimum number of threads to use for admin requests.
 adminMaxThreads           64                        The maximum number of threads to use for admin requests.
@@ -214,13 +246,14 @@ HTTP
 ----
 
 .. code-block:: yaml
-    
+
     # Extending from the default server configuration
     server:
       applicationConnectors:
         - type: http
           port: 8080
           bindHost: 127.0.0.1 # only bind to loopback
+          inheritChannel: false
           headerCacheSize: 512 bytes
           outputBufferSize: 32KiB
           maxRequestHeaderSize: 8KiB
@@ -245,6 +278,8 @@ Name                     Default             Description
 ======================== ==================  ======================================================================================
 port                     8080                The TCP/IP port on which to listen for incoming connections.
 bindHost                 (none)              The hostname to bind to.
+inheritChannel           false               Whether this connector uses a channel inherited from the JVM.
+                                             Use it with `Server::Starter`_, to launch an instance of Jetty on demand.
 headerCacheSize          512 bytes           The size of the header field cache.
 outputBufferSize         32KiB               The size of the buffer into which response content is aggregated before being sent to
                                              the client. A larger buffer can improve performance by allowing a content producer
@@ -265,7 +300,7 @@ idleTimeout              30 seconds          The maximum idle time for a connect
                                              or when waiting for a new message to be sent on a connection.
                                              This value is interpreted as the maximum time between some progress being made on the
                                              connection. So if a single byte is read or written, then the timeout is reset.
-minBufferPoolSize        64 bytes            The minimum size of the buffer pool. 
+minBufferPoolSize        64 bytes            The minimum size of the buffer pool.
 bufferPoolIncrement      1KiB                The increment by which the buffer pool should be increased.
 maxBufferPoolSize        64KiB               The maximum size of the buffer pool.
 acceptorThreads          # of CPUs/2         The number of worker threads dedicated to accepting connections.
@@ -282,6 +317,8 @@ useForwardedHeaders      true                Whether or not to look at ``X-Forwa
 .. _`java.net.Socket#setSoTimeout(int)`: http://docs.oracle.com/javase/7/docs/api/java/net/Socket.html#setSoTimeout(int)
 .. _`ForwardedRequestCustomizer`: http://download.eclipse.org/jetty/stable-9/apidocs/org/eclipse/jetty/server/ForwardedRequestCustomizer.html
 
+.. _`Server::Starter`:  https://github.com/kazuho/p5-Server-Starter
+
 .. _man-configuration-https:
 
 HTTPS
@@ -290,7 +327,7 @@ HTTPS
 Extends the attributes that are available to the :ref:`HTTP connector <man-configuration-http>`
 
 .. code-block:: yaml
-    
+
     # Extending from the default server configuration
     server:
       applicationConnectors:
@@ -300,14 +337,14 @@ Extends the attributes that are available to the :ref:`HTTP connector <man-confi
           keyStorePath: /path/to/file
           keyStorePassword: changeit
           keyStoreType: JKS
-          keyStoreProvider: 
+          keyStoreProvider:
           trustStorePath: /path/to/file
           trustStorePassword: changeit
           trustStoreType: JKS
-          trustStoreProvider: 
+          trustStoreProvider:
           keyManagerPassword: changeit
           needClientAuth: false
-          wantClientAuth: 
+          wantClientAuth:
           certAlias: <alias>
           crlPath: /path/to/file
           enableCRLDP: false
@@ -358,8 +395,8 @@ excludedProtocols                (none)              A list of protocols (e.g., 
 supportedCipherSuites            (none)              A list of cipher suites (e.g., ``TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256``) which
                                                      are supported. All other cipher suites will be refused
 excludedCipherSuites             (none)              A list of cipher suites (e.g., ``TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256``) which
-                                                     are excluded. These cipher suites will be refused and exclusion takes higher 
-                                                     precedence than inclusion, such that if a cipher suite is listed in 
+                                                     are excluded. These cipher suites will be refused and exclusion takes higher
+                                                     precedence than inclusion, such that if a cipher suite is listed in
                                                      ``supportedCipherSuites`` and ``excludedCipherSuites``, the cipher suite will be
                                                      excluded. To verify that the proper cipher suites are being whitelisted and
                                                      blacklisted, it is recommended to use the tool `sslyze`_.
@@ -369,36 +406,92 @@ endpointIdentificationAlgorithm  (none)              Which endpoint identificati
 
 .. _sslyze: https://github.com/iSECPartners/sslyze
 
-.. _man-configuration-spdy:
+.. _man-configuration-http2:
 
-SPDY
-----
+HTTP/2 over TLS
+---------------
 
-Extends the attributes that are available to the :ref:`HTTPS connector <man-configuration-https>`
+HTTP/2 is a new protocol, intended as a successor of HTTP/1.1. It adds several important features
+like binary structure, stream multiplexing over a single connection, header compression, and server push.
+At the same time it remains semantically compatible with HTTP/1.1, which should make the upgrade process more
+seamless. Checkout HTTP/2 FAQ__ for the further information.
+
+.. __: https://http2.github.io/faq/
+
+For an encrypted connection HTTP/2 uses ALPN protocol. It's a TLS extension, that allows a client to negotiate
+a protocol to use after the handshake is complete. If either side does not support ALPN, then the protocol will
+be ignored, and an HTTP/1.1 connection over TLS will be used instead.
 
 For this connector to work with ALPN protocol you need to provide alpn-boot library to JVM's bootpath.
-The correct library version depends on the JVM version. Consult Jetty ALPN guide__ for the reference.
+The correct library version depends on a JVM version. Consult Jetty ALPN guide__ for the reference.
 
 .. __: http://www.eclipse.org/jetty/documentation/current/alpn-chapter.html
+
+Note that your JVM also must provide ``TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256`` cipher. The specification states__
+that HTTP/2 deployments must support it to avoid handshake failures. It's the single supported cipher in HTTP/2
+connector by default.
+
+.. __: http://http2.github.io/http2-spec/index.html#rfc.section.9.2.2
+
+This connector extends the attributes that are available to the :ref:`HTTPS connector <man-configuration-https>`
 
 .. code-block:: yaml
 
     server:
       applicationConnectors:
-        - type: spdy3
+        - type: h2
           port: 8445
-          keyStorePath: example.keystore
-          keyStorePassword: example
-          validateCerts: false
+          maxConcurrentStreams: 1024
+          initialStreamSendWindow: 65535
+          keyStorePath: /path/to/file # required
+          keyStorePassword: changeit
+          trustStorePath: /path/to/file # required
+          trustStorePassword: changeit
 
 
-====================== ===========  ===========
-Name                   Default      Description
-====================== ===========  ===========
-pushStrategy           (none)       The `push strategy`_ to use for server-initiated SPDY pushes.
-====================== ===========  ===========
+========================  ========  ===================================================================================
+Name                      Default   Description
+========================  ========  ===================================================================================
+maxConcurrentStreams      1024      The maximum number of concurrently open streams allowed on a single HTTP/2
+                                    connection. Larger values increase parallelism, but cost a memory commitment.
+initialStreamSendWindow   65535     The initial flow control window size for a new stream. Larger values may allow
+                                    greater throughput, but also risk head of line blocking if TCP/IP flow control is
+                                    triggered.
+========================  ========  ===================================================================================
 
-.. _`push strategy`: https://github.com/dropwizard/dropwizard/blob/master/dropwizard-spdy/src/main/java/io/dropwizard/spdy/PushStrategyFactory.java
+.. _man-configuration-http2c:
+
+HTTP/2 Plain Text
+-----------------
+
+HTTP/2 promotes using encryption, but doesn't require it. However, most browsers stated that they will
+not support HTTP/2 without encryption. Currently no browser supports HTTP/2 unencrypted.
+
+The connector should only be used in closed secured networks or during development. It expects from clients
+an HTTP/1.1 OPTIONS request with ``Upgrade : h2c`` header to indicate a wish to upgrade to HTTP/2, or a request with
+the HTTP/2 connection preface. If the client doesn't support HTTP/2, a plain HTTP/1.1 connections will be used instead.
+
+This connector extends the attributes that are available to the :ref:`HTTP connector <man-configuration-http>`
+
+.. code-block:: yaml
+
+    server:
+      applicationConnectors:
+        - type: h2c
+          port: 8446
+          maxConcurrentStreams: 1024
+          initialStreamSendWindow: 65535
+
+
+========================  ========  ===================================================================================
+Name                      Default   Description
+========================  ========  ===================================================================================
+maxConcurrentStreams      1024      The maximum number of concurrently open streams allowed on a single HTTP/2
+                                    connection. Larger values increase parallelism, but cost a memory commitment.
+initialStreamSendWindow   65535     The initial flow control window size for a new stream. Larger values may allow
+                                    greater throughput, but also risk head of line blocking if TCP/IP flow control is
+                                    triggered.
+========================  ========  ===================================================================================
 
 
 .. _man-configuration-logging:
@@ -449,6 +542,8 @@ Console
           timeZone: UTC
           target: stdout
           logFormat: # TODO
+          filterFactories:
+            - type: URI
 
 
 ====================== ===========  ===========
@@ -461,6 +556,8 @@ target                 stdout       The name of the standard stream to which eve
                                     Can be ``stdout`` or ``stderr``.
 logFormat              default      The Logback pattern with which events will be formatted. See
                                     the Logback_ documentation for details.
+filterFactories        (none)       The list of filters to apply to the appender, in order, after
+                                    the thresold.
 ====================== ===========  ===========
 
 .. _Logback: http://logback.qos.ch/manual/layouts.html#conversionWord
@@ -484,6 +581,8 @@ File
           archivedFileCount: 5
           timeZone: UTC
           logFormat: # TODO
+          filterFactories:
+            - type: URI
 
 
 ============================ ===========  ==================================================================================================
@@ -495,12 +594,14 @@ threshold                    ALL          The lowest level of events to write to
 archive                      true         Whether or not to archive old events in separate files.
 archivedLogFilenamePattern   (none)       Required if ``archive`` is ``true``.
                                           The filename pattern for archived files. ``%d`` is replaced with the date in ``yyyy-MM-dd`` form,
-                                          and the fact that it ends with ``.gz`` indicates the file will be gzipped as it's archived.                                
+                                          and the fact that it ends with ``.gz`` indicates the file will be gzipped as it's archived.
                                           Likewise, filename patterns which end in ``.zip`` will be filled as they are archived.
 archivedFileCount            5            The number of archived files to keep. Must be between ``1`` and ``50``.
 timeZone                     UTC          The time zone to which event timestamps will be converted.
 logFormat                    default      The Logback pattern with which events will be formatted. See
                                           the Logback_ documentation for details.
+filterFactories              (none)       The list of filters to apply to the appender, in order, after
+                                          the thresold.
 ============================ ===========  ==================================================================================================
 
 
@@ -521,6 +622,8 @@ Syslog
           threshold: ALL
           stackTracePrefix: \t
           logFormat: # TODO
+          filterFactories:
+            - type: URI
 
 
 ============================ ===========  ==================================================================================================
@@ -538,8 +641,31 @@ logFormat                    default      The Logback pattern with which events 
                                           the Logback_ documentation for details.
 stackTracePrefix             \t           The prefix to use when writing stack trace lines (these are sent
                                           to the syslog server separately from the main message)
+filterFactories              (none)       The list of filters to apply to the appender, in order, after
+                                          the thresold.
 ============================ ===========  ==================================================================================================
 
+
+.. _man-configuration-logging-filter-factories:
+
+FilterFactories
+---------------
+
+.. code-block:: yaml
+
+    logging:
+      level: INFO
+      appenders:
+        - type: console
+          filterFactories:
+            - type: URI
+
+
+====================== ===========  ================
+Name                   Default      Description
+====================== ===========  ================
+type                   REQUIRED     The filter type.
+====================== ===========  ================
 
 .. _man-configuration-metrics:
 
@@ -600,8 +726,8 @@ The inclusion and exclusion rules are defined as:
 * If **includes** is empty, then all metrics are included;
 * If **includes** is not empty, only metrics from this list are included;
 * If **excludes** is empty, no metrics are excluded;
-* If **excludes** is not empty, then exclusion rules take precedence over inclusion rules. Thus if a name matches
-the exclusion rules it will not be included in reports even if it also matches the inclusion rules.
+* If **excludes** is not empty, then exclusion rules take precedence over inclusion rules. Thus if a name matches the exclusion rules it will not be included in reports even if it also matches the inclusion rules.
+
 
 .. _man-configuration-metrics-formatted:
 
@@ -709,11 +835,11 @@ Name                   Default          Description
 ====================== ===============  ====================================================================================================
 host                   localhost        The hostname (or group) of the Ganglia server(s) to report to.
 port                   8649             The port of the Ganglia server(s) to report to.
-mode                   unicast          The UDP addressing mode to announce the metrics with. One of ``unicast`` 
+mode                   unicast          The UDP addressing mode to announce the metrics with. One of ``unicast``
                                         or ``multicast``.
 ttl                    1                The time-to-live of the UDP packets for the announced metrics.
 uuid                   (none)           The UUID to tag announced metrics with.
-spoof                  (none)           The hostname and port to use instead of this nodes for the announced metrics. 
+spoof                  (none)           The hostname and port to use instead of this nodes for the announced metrics.
                                         In the format ``hostname:port``.
 tmax                   60               The tmax value to announce metrics with.
 dmax                   0                The dmax value to announce metrics with.
@@ -900,7 +1026,7 @@ TLS
 Name                         Default            Description
 ===========================  =================  ============================================================================================================================
 protocol                     TLSv1.2            The default protocol the client will attempt to use during the SSL Handshake.
-                                                See 
+                                                See
                                                 `here <http://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html#SSLContext>`_ for more information.
 verifyHostname               true               Whether to verify the hostname of the server against the hostname presented in the server certificate.
 keyStorePath                 (none)             The path to the Java key store which contains the client certificate and private key.
@@ -943,7 +1069,7 @@ See JerseyClientConfiguration_ and HttpClientConfiguration_ for more options.
 Name                    Default             Description
 ======================= ==================  ===================================================================================================
 minThreads              1                   The minimum number of threads in the pool used for asynchronous requests.
-maxThreads              128                 The maximum number of threads in the pool used for asynchronous requests.
+maxThreads              128                 The maximum number of threads in the pool used for asynchronous requests. If asynchronous requests made by jersey client while serving requests, the number must be set according to the `maxThread` setting of the :ref:`server <man-configuration-all>`. Otherwise some requests made to dropwizard on heavy load may fail due to congestion on the jersey client's thread pool.
 workQueueSize           8                   The size of the work queue of the pool used for asynchronous requests.
                                             Additional threads will be spawn only if the queue is reached its maximum size.
 gzipEnabled             true                Adds an Accept-Encoding: gzip header to all requests, and enables automatic gzip decoding of responses.
@@ -973,9 +1099,18 @@ driverClass                     REQUIRED                 The full name of the JD
 
 url                             REQUIRED                 The URL of the server.
 
-user                            REQUIRED                 The username used to connect to the server.
+user                            none                     The username used to connect to the server.
 
 password                        none                     The password used to connect to the server.
+
+removeAbandoned                 false                    Remove abandoned connections if they exceed
+                                                         removeAbandonedTimeout. If set to true a connection is
+                                                         considered abandoned and eligible for removal if it has been in
+                                                         use longer than the removeAbandonedTimeout and the condition
+                                                         for abandonWhenPercentageFull is met.
+
+removeAbandonedTimeout          60 seconds               The time before a database connection can be considered
+                                                         abandoned.
 
 abandonWhenPercentageFull       0                        Connections that have been abandoned (timed out) won't get
                                                          closed and reported up unless the number of connections in use
@@ -989,6 +1124,10 @@ alternateUsernamesAllowed       false                    Set to true if the call
 
 commitOnReturn                  false                    Set to true if you want the connection pool to commit any
                                                          pending transaction when a connection is returned.
+
+rollbackOnReturn                false                    Set to true if you want the connection pool to rollback any
+                                                         pending transaction when a connection is returned.
+
 
 autoCommitByDefault             JDBC driver's default    The default auto-commit state of the connections.
 
@@ -1064,7 +1203,7 @@ validatorClassName              none                     Name of a class of a cu
 .. _man-configuration-polymorphic:
 
 Polymorphic configuration
-========
+=========================
 
 .. rubric:: The ``dropwizard-configuration`` module provides you with a polymorphic configuration
             mechanism, meaning that a particular section of your configuration file can be implemented
