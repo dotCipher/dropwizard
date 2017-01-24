@@ -5,15 +5,17 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
-
+import io.dropwizard.validation.ValidationMethod;
 import org.eclipse.jetty.http.HttpVersion;
 import org.eclipse.jetty.io.ByteBufferPool;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.SecureRequestCustomizer;
-import org.eclipse.jetty.server.SslConnectionFactory;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.SslConnectionFactory;
+import org.eclipse.jetty.util.component.AbstractLifeCycle;
+import org.eclipse.jetty.util.component.LifeCycle;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.ScheduledExecutorScheduler;
 import org.eclipse.jetty.util.thread.Scheduler;
@@ -22,15 +24,11 @@ import org.hibernate.validator.constraints.NotEmpty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.dropwizard.validation.ValidationMethod;
-
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
-
 import java.io.File;
 import java.net.URI;
 import java.security.KeyStore;
-import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -154,20 +152,26 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *     </tr>
  *     <tr>
  *         <td>{@code validateCerts}</td>
- *         <td>true</td>
+ *         <td>false</td>
  *         <td>
  *             Whether or not to validate TLS certificates before starting. If enabled, Dropwizard
- *             will refuse to start with expired or otherwise invalid certificates.
+ *             will refuse to start with expired or otherwise invalid certificates. This option will
+ *             cause unconditional failure in Dropwizard 1.x until a new validation mechanism can be
+ *             implemented.
  *         </td>
  *     </tr>
  *     <tr>
  *         <td>{@code validatePeers}</td>
- *         <td>true</td>
- *         <td>Whether or not to validate TLS peer certificates.</td>
+ *         <td>false</td>
+ *         <td>
+ *             Whether or not to validate TLS peer certificates. This option will
+ *             cause unconditional failure in Dropwizard 1.x until a new validation mechanism can be
+ *             implemented.
+ *         </td>
  *     </tr>
  *     <tr>
  *         <td>{@code supportedProtocols}</td>
- *         <td>(none)</td>
+ *         <td>JVM default</td>
  *         <td>
  *             A list of protocols (e.g., {@code SSLv3}, {@code TLSv1}) which are supported. All
  *             other protocols will be refused.
@@ -175,7 +179,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *     </tr>
  *     <tr>
  *         <td>{@code excludedProtocols}</td>
- *         <td>(none)</td>
+ *         <td>Jetty's default</td>
  *         <td>
  *             A list of protocols (e.g., {@code SSLv3}, {@code TLSv1}) which are excluded. These
  *             protocols will be refused.
@@ -183,15 +187,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *     </tr>
  *     <tr>
  *         <td>{@code supportedCipherSuites}</td>
- *         <td>(none)</td>
+ *         <td>JVM default</td>
  *         <td>
  *             A list of cipher suites (e.g., {@code TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256}) which
  *             are supported. All other cipher suites will be refused
  *         </td>
- *     </tr>
+ *    </tr>
  *    <tr>
  *         <td>{@code excludedCipherSuites}</td>
- *         <td>(none)</td>
+ *         <td>Jetty's default</td>
  *         <td>
  *             A list of cipher suites (e.g., {@code TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256}) which
  *             are excluded. These cipher suites will be refused.
@@ -249,8 +253,8 @@ public class HttpsConnectorFactory extends HttpConnectorFactory {
     private Integer maxCertPathLength;
     private URI ocspResponderUrl;
     private String jceProvider;
-    private boolean validateCerts = true;
-    private boolean validatePeers = true;
+    private boolean validateCerts = false;
+    private boolean validatePeers = false;
     private List<String> supportedProtocols;
     private List<String> excludedProtocols;
     private List<String> supportedCipherSuites;
@@ -531,14 +535,15 @@ public class HttpsConnectorFactory extends HttpConnectorFactory {
 
     @Override
     public Connector build(Server server, MetricRegistry metrics, String name, ThreadPool threadPool) {
-        logSupportedParameters();
-
         final HttpConfiguration httpConfig = buildHttpConfiguration();
 
         final HttpConnectionFactory httpConnectionFactory = buildHttpConnectionFactory(httpConfig);
 
-        final SslContextFactory sslContextFactory = buildSslContextFactory();
+        final SslContextFactory sslContextFactory = configureSslContextFactory(new SslContextFactory());
+        sslContextFactory.addLifeCycleListener(logSslInfoOnStart(sslContextFactory));
+
         server.addBean(sslContextFactory);
+        server.addBean(new SslReload(sslContextFactory, this::configureSslContextFactory));
 
         final SslConnectionFactory sslConnectionFactory =
                 new SslConnectionFactory(sslContextFactory, HttpVersion.HTTP_1_1.toString());
@@ -563,39 +568,45 @@ public class HttpsConnectorFactory extends HttpConnectorFactory {
         return config;
     }
 
-    protected void logSupportedParameters() {
+    /** Register a listener that waits until the ssl context factory has started. Once it has
+     *  started we can grab the fully initialized context so we can log the parameters.
+     */
+    protected AbstractLifeCycle.AbstractLifeCycleListener logSslInfoOnStart(final SslContextFactory sslContextFactory) {
+        return new AbstractLifeCycle.AbstractLifeCycleListener() {
+            @Override
+            public void lifeCycleStarted(LifeCycle event) {
+                logSupportedParameters(sslContextFactory.getSslContext());
+            }
+        };
+    }
+
+    private void logSupportedParameters(SSLContext context) {
         if (LOGGED.compareAndSet(false, true)) {
-            try {
-                final SSLContext context = SSLContext.getDefault();
-                final String[] protocols = context.getSupportedSSLParameters().getProtocols();
-                final SSLSocketFactory factory = context.getSocketFactory();
-                final String[] cipherSuites = factory.getSupportedCipherSuites();
-                LOGGER.info("Supported protocols: {}", Arrays.toString(protocols));
-                LOGGER.info("Supported cipher suites: {}", Arrays.toString(cipherSuites));
+            final String[] protocols = context.getSupportedSSLParameters().getProtocols();
+            final SSLSocketFactory factory = context.getSocketFactory();
+            final String[] cipherSuites = factory.getSupportedCipherSuites();
+            LOGGER.info("Supported protocols: {}", Arrays.toString(protocols));
+            LOGGER.info("Supported cipher suites: {}", Arrays.toString(cipherSuites));
 
-                if (getSupportedProtocols() != null) {
-                    LOGGER.info("Configured protocols: {}", getSupportedProtocols());
-                }
+            if (getSupportedProtocols() != null) {
+                LOGGER.info("Configured protocols: {}", getSupportedProtocols());
+            }
 
-                if (getExcludedProtocols() != null) {
-                    LOGGER.info("Excluded protocols: {}", getExcludedProtocols());
-                }
+            if (getExcludedProtocols() != null) {
+                LOGGER.info("Excluded protocols: {}", getExcludedProtocols());
+            }
 
-                if (getSupportedCipherSuites() != null) {
-                    LOGGER.info("Configured cipher suites: {}", getSupportedCipherSuites());
-                }
+            if (getSupportedCipherSuites() != null) {
+                LOGGER.info("Configured cipher suites: {}", getSupportedCipherSuites());
+            }
 
-                if (getExcludedCipherSuites() != null) {
-                    LOGGER.info("Excluded cipher suites: {}", getExcludedCipherSuites());
-                }
-            } catch (NoSuchAlgorithmException ignored) {
-
+            if (getExcludedCipherSuites() != null) {
+                LOGGER.info("Excluded cipher suites: {}", getExcludedCipherSuites());
             }
         }
     }
 
-    protected SslContextFactory buildSslContextFactory() {
-        final SslContextFactory factory = new SslContextFactory();
+    protected SslContextFactory configureSslContextFactory(SslContextFactory factory) {
         if (keyStorePath != null) {
             factory.setKeyStorePath(keyStorePath);
         }
@@ -621,14 +632,14 @@ public class HttpsConnectorFactory extends HttpConnectorFactory {
 
         final String trustStoreType = getTrustStoreType();
         if (trustStoreType.startsWith("Windows-")) {
-          try {
-            final KeyStore keyStore = KeyStore.getInstance(trustStoreType);
+            try {
+                final KeyStore keyStore = KeyStore.getInstance(trustStoreType);
 
-            keyStore.load(null, null);
-            factory.setTrustStore(keyStore);
-          } catch (Exception e) {
-            throw new IllegalStateException("Windows key store not supported", e);
-          }
+                keyStore.load(null, null);
+                factory.setTrustStore(keyStore);
+            } catch (Exception e) {
+                throw new IllegalStateException("Windows key store not supported", e);
+            }
         } else {
             if (trustStorePath != null) {
                 factory.setTrustStorePath(trustStorePath);

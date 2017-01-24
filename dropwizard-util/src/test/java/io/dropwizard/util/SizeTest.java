@@ -1,7 +1,6 @@
 package io.dropwizard.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import org.junit.Test;
 
 import java.io.IOException;
@@ -116,12 +115,12 @@ public class SizeTest {
         assertThat(Size.parse("64   kilobytes"))
                 .isEqualTo(Size.kilobytes(64));
     }
-    
+
     @Test
-    public void parseCaseInsensitive() {        
+    public void parseCaseInsensitive() {
         assertThat(Size.parse("1b")).isEqualTo(Size.parse("1B"));
     }
-    
+
     @Test
     public void parseSingleLetterSuffix() {
         assertThat(Size.parse("1B")).isEqualTo(Size.bytes(1));
@@ -384,65 +383,65 @@ public class SizeTest {
         assertThat(Size.terabytes(-1)).isGreaterThan(Size.terabytes(-2));
 
         // both positive
-        assertThat(Size.bytes(1)).isLessThan(Size.bytes((2)));
-        assertThat(Size.bytes(1)).isLessThan(Size.kilobytes((2)));
-        assertThat(Size.bytes(1)).isLessThan(Size.megabytes((2)));
-        assertThat(Size.bytes(1)).isLessThan(Size.gigabytes((2)));
-        assertThat(Size.bytes(1)).isLessThan(Size.terabytes((2)));
+        assertThat(Size.bytes(1)).isLessThan(Size.bytes(2));
+        assertThat(Size.bytes(1)).isLessThan(Size.kilobytes(2));
+        assertThat(Size.bytes(1)).isLessThan(Size.megabytes(2));
+        assertThat(Size.bytes(1)).isLessThan(Size.gigabytes(2));
+        assertThat(Size.bytes(1)).isLessThan(Size.terabytes(2));
 
-        assertThat(Size.kilobytes(1)).isGreaterThan(Size.bytes((2)));
-        assertThat(Size.kilobytes(1)).isLessThan(Size.kilobytes((2)));
-        assertThat(Size.kilobytes(1)).isLessThan(Size.megabytes((2)));
-        assertThat(Size.kilobytes(1)).isLessThan(Size.gigabytes((2)));
-        assertThat(Size.kilobytes(1)).isLessThan(Size.terabytes((2)));
+        assertThat(Size.kilobytes(1)).isGreaterThan(Size.bytes(2));
+        assertThat(Size.kilobytes(1)).isLessThan(Size.kilobytes(2));
+        assertThat(Size.kilobytes(1)).isLessThan(Size.megabytes(2));
+        assertThat(Size.kilobytes(1)).isLessThan(Size.gigabytes(2));
+        assertThat(Size.kilobytes(1)).isLessThan(Size.terabytes(2));
 
-        assertThat(Size.megabytes(1)).isGreaterThan(Size.bytes((2)));
-        assertThat(Size.megabytes(1)).isGreaterThan(Size.kilobytes((2)));
-        assertThat(Size.megabytes(1)).isLessThan(Size.megabytes((2)));
-        assertThat(Size.megabytes(1)).isLessThan(Size.gigabytes((2)));
-        assertThat(Size.megabytes(1)).isLessThan(Size.terabytes((2)));
+        assertThat(Size.megabytes(1)).isGreaterThan(Size.bytes(2));
+        assertThat(Size.megabytes(1)).isGreaterThan(Size.kilobytes(2));
+        assertThat(Size.megabytes(1)).isLessThan(Size.megabytes(2));
+        assertThat(Size.megabytes(1)).isLessThan(Size.gigabytes(2));
+        assertThat(Size.megabytes(1)).isLessThan(Size.terabytes(2));
 
-        assertThat(Size.gigabytes(1)).isGreaterThan(Size.bytes((2)));
-        assertThat(Size.gigabytes(1)).isGreaterThan(Size.kilobytes((2)));
-        assertThat(Size.gigabytes(1)).isGreaterThan(Size.megabytes((2)));
-        assertThat(Size.gigabytes(1)).isLessThan(Size.gigabytes((2)));
-        assertThat(Size.gigabytes(1)).isLessThan(Size.terabytes((2)));
+        assertThat(Size.gigabytes(1)).isGreaterThan(Size.bytes(2));
+        assertThat(Size.gigabytes(1)).isGreaterThan(Size.kilobytes(2));
+        assertThat(Size.gigabytes(1)).isGreaterThan(Size.megabytes(2));
+        assertThat(Size.gigabytes(1)).isLessThan(Size.gigabytes(2));
+        assertThat(Size.gigabytes(1)).isLessThan(Size.terabytes(2));
 
-        assertThat(Size.terabytes(1)).isGreaterThan(Size.bytes((2)));
-        assertThat(Size.terabytes(1)).isGreaterThan(Size.kilobytes((2)));
-        assertThat(Size.terabytes(1)).isGreaterThan(Size.megabytes((2)));
-        assertThat(Size.terabytes(1)).isGreaterThan(Size.gigabytes((2)));
-        assertThat(Size.terabytes(1)).isLessThan(Size.terabytes((2)));
+        assertThat(Size.terabytes(1)).isGreaterThan(Size.bytes(2));
+        assertThat(Size.terabytes(1)).isGreaterThan(Size.kilobytes(2));
+        assertThat(Size.terabytes(1)).isGreaterThan(Size.megabytes(2));
+        assertThat(Size.terabytes(1)).isGreaterThan(Size.gigabytes(2));
+        assertThat(Size.terabytes(1)).isLessThan(Size.terabytes(2));
 
-        assertThat(Size.bytes(2)).isGreaterThan(Size.bytes((1)));
-        assertThat(Size.bytes(2)).isLessThan(Size.kilobytes((1)));
-        assertThat(Size.bytes(2)).isLessThan(Size.megabytes((1)));
-        assertThat(Size.bytes(2)).isLessThan(Size.gigabytes((1)));
-        assertThat(Size.bytes(2)).isLessThan(Size.terabytes((1)));
+        assertThat(Size.bytes(2)).isGreaterThan(Size.bytes(1));
+        assertThat(Size.bytes(2)).isLessThan(Size.kilobytes(1));
+        assertThat(Size.bytes(2)).isLessThan(Size.megabytes(1));
+        assertThat(Size.bytes(2)).isLessThan(Size.gigabytes(1));
+        assertThat(Size.bytes(2)).isLessThan(Size.terabytes(1));
 
-        assertThat(Size.kilobytes(2)).isGreaterThan(Size.bytes((1)));
-        assertThat(Size.kilobytes(2)).isGreaterThan(Size.kilobytes((1)));
-        assertThat(Size.kilobytes(2)).isLessThan(Size.megabytes((1)));
-        assertThat(Size.kilobytes(2)).isLessThan(Size.gigabytes((1)));
-        assertThat(Size.kilobytes(2)).isLessThan(Size.terabytes((1)));
+        assertThat(Size.kilobytes(2)).isGreaterThan(Size.bytes(1));
+        assertThat(Size.kilobytes(2)).isGreaterThan(Size.kilobytes(1));
+        assertThat(Size.kilobytes(2)).isLessThan(Size.megabytes(1));
+        assertThat(Size.kilobytes(2)).isLessThan(Size.gigabytes(1));
+        assertThat(Size.kilobytes(2)).isLessThan(Size.terabytes(1));
 
-        assertThat(Size.megabytes(2)).isGreaterThan(Size.bytes((1)));
-        assertThat(Size.megabytes(2)).isGreaterThan(Size.kilobytes((1)));
-        assertThat(Size.megabytes(2)).isGreaterThan(Size.megabytes((1)));
-        assertThat(Size.megabytes(2)).isLessThan(Size.gigabytes((1)));
-        assertThat(Size.megabytes(2)).isLessThan(Size.terabytes((1)));
+        assertThat(Size.megabytes(2)).isGreaterThan(Size.bytes(1));
+        assertThat(Size.megabytes(2)).isGreaterThan(Size.kilobytes(1));
+        assertThat(Size.megabytes(2)).isGreaterThan(Size.megabytes(1));
+        assertThat(Size.megabytes(2)).isLessThan(Size.gigabytes(1));
+        assertThat(Size.megabytes(2)).isLessThan(Size.terabytes(1));
 
-        assertThat(Size.gigabytes(2)).isGreaterThan(Size.bytes((1)));
-        assertThat(Size.gigabytes(2)).isGreaterThan(Size.kilobytes((1)));
-        assertThat(Size.gigabytes(2)).isGreaterThan(Size.megabytes((1)));
-        assertThat(Size.gigabytes(2)).isGreaterThan(Size.gigabytes((1)));
-        assertThat(Size.gigabytes(2)).isLessThan(Size.terabytes((1)));
+        assertThat(Size.gigabytes(2)).isGreaterThan(Size.bytes(1));
+        assertThat(Size.gigabytes(2)).isGreaterThan(Size.kilobytes(1));
+        assertThat(Size.gigabytes(2)).isGreaterThan(Size.megabytes(1));
+        assertThat(Size.gigabytes(2)).isGreaterThan(Size.gigabytes(1));
+        assertThat(Size.gigabytes(2)).isLessThan(Size.terabytes(1));
 
-        assertThat(Size.terabytes(2)).isGreaterThan(Size.bytes((1)));
-        assertThat(Size.terabytes(2)).isGreaterThan(Size.kilobytes((1)));
-        assertThat(Size.terabytes(2)).isGreaterThan(Size.megabytes((1)));
-        assertThat(Size.terabytes(2)).isGreaterThan(Size.gigabytes((1)));
-        assertThat(Size.terabytes(2)).isGreaterThan(Size.terabytes((1)));
+        assertThat(Size.terabytes(2)).isGreaterThan(Size.bytes(1));
+        assertThat(Size.terabytes(2)).isGreaterThan(Size.kilobytes(1));
+        assertThat(Size.terabytes(2)).isGreaterThan(Size.megabytes(1));
+        assertThat(Size.terabytes(2)).isGreaterThan(Size.gigabytes(1));
+        assertThat(Size.terabytes(2)).isGreaterThan(Size.terabytes(1));
 
         // one negative, one positive
         assertThat(Size.bytes(-1)).isLessThan(Size.bytes(1));

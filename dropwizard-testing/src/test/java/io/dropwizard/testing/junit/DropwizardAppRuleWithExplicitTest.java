@@ -1,25 +1,20 @@
 package io.dropwizard.testing.junit;
 
+import com.google.common.collect.ImmutableMap;
 import io.dropwizard.Application;
 import io.dropwizard.jetty.HttpConnectorFactory;
 import io.dropwizard.server.DefaultServerFactory;
 import io.dropwizard.setup.Environment;
-
-import java.util.Map;
-
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.ClientBuilder;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
-
 import org.junit.Assert;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import com.google.common.collect.ImmutableMap;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import java.util.Map;
 
 public class DropwizardAppRuleWithExplicitTest {
 
@@ -39,11 +34,10 @@ public class DropwizardAppRuleWithExplicitTest {
         RULE = new DropwizardAppRule<>(TestApplication.class, config);
     }
 
-    Client client = ClientBuilder.newClient();
 
     @Test
     public void runWithExplicitConfig() {
-        Map<?,?> response = client.target("http://localhost:" + RULE.getLocalPort() + "/test")
+        Map<?, ?> response = RULE.client().target("http://localhost:" + RULE.getLocalPort() + "/test")
                 .request()
                 .get(Map.class);
         Assert.assertEquals(ImmutableMap.of("message", "stuff!"), response);
@@ -61,7 +55,9 @@ public class DropwizardAppRuleWithExplicitTest {
     public static class TestResource {
         private final String message;
 
-        public TestResource(String m) { message = m; }
+        public TestResource(String m) {
+            message = m;
+        }
 
         @GET
         public Response get() {

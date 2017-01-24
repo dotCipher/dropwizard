@@ -27,7 +27,7 @@ public class ExecutorServiceBuilder {
     private ThreadFactory threadFactory;
     private RejectedExecutionHandler handler;
 
-    public ExecutorServiceBuilder(LifecycleEnvironment environment, String nameFormat) {
+    public ExecutorServiceBuilder(LifecycleEnvironment environment, String nameFormat, ThreadFactory factory) {
         this.environment = environment;
         this.nameFormat = nameFormat;
         this.corePoolSize = 0;
@@ -35,8 +35,12 @@ public class ExecutorServiceBuilder {
         this.keepAliveTime = Duration.seconds(60);
         this.shutdownTime = Duration.seconds(5);
         this.workQueue = new LinkedBlockingQueue<>();
-        this.threadFactory = new ThreadFactoryBuilder().setNameFormat(nameFormat).build();
+        this.threadFactory = factory;
         this.handler = new ThreadPoolExecutor.AbortPolicy();
+    }
+
+    public ExecutorServiceBuilder(LifecycleEnvironment environment, String nameFormat) {
+        this(environment, nameFormat, new ThreadFactoryBuilder().setNameFormat(nameFormat).build());
     }
 
     public ExecutorServiceBuilder minThreads(int threads) {
@@ -95,6 +99,6 @@ public class ExecutorServiceBuilder {
 
     @VisibleForTesting
     static synchronized void setLog(Logger newLog) {
-       log = newLog;
+        log = newLog;
     }
 }

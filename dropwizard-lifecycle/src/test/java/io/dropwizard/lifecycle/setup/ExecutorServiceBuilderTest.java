@@ -1,16 +1,24 @@
 package io.dropwizard.lifecycle.setup;
 
-import com.google.common.base.Throwables;
 import io.dropwizard.util.Duration;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.exceptions.verification.WantedButNotInvoked;
 import org.slf4j.Logger;
 
-import java.util.concurrent.*;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 public class ExecutorServiceBuilderTest {
 
@@ -97,8 +105,9 @@ public class ExecutorServiceBuilderTest {
             .maxThreads(Integer.MAX_VALUE)
             .build();
 
-        try { verify(log).warn(anyString()); }
-        catch (WantedButNotInvoked error) {
+        try {
+            verify(log).warn(anyString());
+        } catch (WantedButNotInvoked error) {
             // no warning has been given so we should be able to execute at least 2 things at once
             assertCanExecuteAtLeast2ConcurrentTasks(exe);
         }
@@ -111,13 +120,12 @@ public class ExecutorServiceBuilderTest {
      */
     private void assertCanExecuteAtLeast2ConcurrentTasks(Executor exe) {
         CountDownLatch latch = new CountDownLatch(2);
-        Runnable concurrentLatchCountDownAndWait = new Runnable() {
-            public void run() {
-                latch.countDown();
-                try { latch.await(); }
-                catch (InterruptedException ex) {
-                    Throwables.propagate(ex);
-                }
+        Runnable concurrentLatchCountDownAndWait = () -> {
+            latch.countDown();
+            try {
+                latch.await();
+            } catch (InterruptedException ex) {
+                throw new RuntimeException(ex);
             }
         };
 
@@ -129,9 +137,8 @@ public class ExecutorServiceBuilderTest {
             assertThat(latch.await(1, TimeUnit.SECONDS))
                 .as("2 tasks executed concurrently on " + exe)
                 .isTrue();
-        }
-        catch (InterruptedException ex) {
-            Throwables.propagate(ex);
+        } catch (InterruptedException ex) {
+            throw new RuntimeException(ex);
         }
     }
 }

@@ -1,6 +1,5 @@
 package io.dropwizard.jersey.optional;
 
-import javax.ws.rs.NotFoundException;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
@@ -24,7 +23,7 @@ public class OptionalDoubleMessageBodyWriter implements MessageBodyWriter<Option
 
     @Override
     public boolean isWriteable(Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType) {
-        return (OptionalDouble.class.isAssignableFrom(type));
+        return OptionalDouble.class.isAssignableFrom(type);
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
@@ -37,7 +36,7 @@ public class OptionalDoubleMessageBodyWriter implements MessageBodyWriter<Option
                         MultivaluedMap<String, Object> httpHeaders,
                         OutputStream entityStream) throws IOException {
         if (!entity.isPresent()) {
-            throw new NotFoundException();
+            throw EmptyOptionalException.INSTANCE;
         }
 
         entityStream.write(Double.toString(entity.getAsDouble()).getBytes(StandardCharsets.US_ASCII));

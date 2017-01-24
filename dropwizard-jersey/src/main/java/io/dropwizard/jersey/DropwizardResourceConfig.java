@@ -6,9 +6,11 @@ import com.fasterxml.classmate.ResolvedType;
 import com.fasterxml.classmate.TypeResolver;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ComparisonChain;
+import com.google.common.collect.Ordering;
 import io.dropwizard.jersey.caching.CacheControlledResponseFeature;
-import io.dropwizard.jersey.params.NonEmptyStringParamFeature;
+import io.dropwizard.jersey.params.AbstractParamConverterProvider;
 import io.dropwizard.jersey.sessions.SessionFactoryProvider;
+import io.dropwizard.jersey.validation.FuzzyEnumParamConverterProvider;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.server.ServerProperties;
 import org.glassfish.jersey.server.model.Resource;
@@ -28,11 +30,14 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.regex.Pattern;
 
 public class DropwizardResourceConfig extends ResourceConfig {
     private static final Logger LOGGER = LoggerFactory.getLogger(DropwizardResourceConfig.class);
     private static final String NEWLINE = String.format("%n");
     private static final TypeResolver TYPE_RESOLVER = new TypeResolver();
+    
+    private static final Pattern PATH_DIRTY_SLASHES = Pattern.compile("\\s*/\\s*/+\\s*");
 
     private String urlPattern = "/*";
 
@@ -66,7 +71,8 @@ public class DropwizardResourceConfig extends ResourceConfig {
         register(io.dropwizard.jersey.optional.OptionalIntMessageBodyWriter.class);
         register(io.dropwizard.jersey.optional.OptionalLongMessageBodyWriter.class);
         register(io.dropwizard.jersey.optional.OptionalParamFeature.class);
-        register(NonEmptyStringParamFeature.class);
+        register(AbstractParamConverterProvider.class);
+        register(new FuzzyEnumParamConverterProvider());
         register(new SessionFactoryProvider.Binder());
     }
 
@@ -119,15 +125,30 @@ public class DropwizardResourceConfig extends ResourceConfig {
         msg.append("The following paths were found for the configured resources:");
         msg.append(NEWLINE).append(NEWLINE);
 
-        final Set<Class<?>> allResources = new HashSet<>();
+        final Set<Class<?>> allResourcesClasses = new HashSet<>();
         for (Class<?> clazz : allClasses()) {
             if (!clazz.isInterface() && Resource.from(clazz) != null) {
-                allResources.add(clazz);
+                allResourcesClasses.add(clazz);
             }
         }
 
-        for (Class<?> klass : allResources) {
+        for (Class<?> klass : allResourcesClasses) {
             new EndpointLogger(urlPattern, klass).populate(endpointLogLines);
+        }
+        
+        final Set<Resource> allResources = this.getResources();
+        for (Resource res : allResources) {
+            for (Resource childRes : res.getChildResources()) {
+                // It is not necessary to check if a handler class is already being logged.
+                //
+                // This code will never be reached because of ambiguous (sub-)resource methods
+                // related to the OPTIONS method and @Consumes/@Produces annotations.
+                
+                for (Class<?> childResHandlerClass : childRes.getHandlerClasses()) {
+                    EndpointLogger epl = new EndpointLogger(urlPattern, childResHandlerClass);
+                    epl.populate(cleanUpPath(res.getPath() + epl.rootPath), epl.klass, false, childRes, endpointLogLines);
+                }
+            }
         }
 
         if (!endpointLogLines.isEmpty()) {
@@ -139,6 +160,11 @@ public class DropwizardResourceConfig extends ResourceConfig {
         }
 
         return msg.toString();
+    }
+    
+    @VisibleForTesting
+    String cleanUpPath(String path) {
+        return PATH_DIRTY_SLASHES.matcher(path).replaceAll("/").trim();
     }
 
 
@@ -186,7 +212,11 @@ public class DropwizardResourceConfig extends ResourceConfig {
                         final Class<?> erasedType = !responseType.getTypeBindings().isEmpty() ?
                                 responseType.getTypeBindings().getBoundType(0).getErasedType() :
                                 responseType.getErasedType();
-                        populate(path, erasedType, true, endpointLogLines);
+                        if (Resource.from(erasedType) == null) {
+                            endpointLogLines.add(new EndpointLogLine(method.getHttpMethod(), path, erasedType));
+                        } else {
+                            populate(path, erasedType, true, endpointLogLines);
+                        }
                     }
                 }
             }
@@ -216,7 +246,8 @@ public class DropwizardResourceConfig extends ResourceConfig {
 
         @Override
         public String toString() {
-            return String.format("    %-7s %s (%s)", httpMethod, basePath, klass.getCanonicalName());
+            final String method = httpMethod == null ? "UNKNOWN" : httpMethod;
+            return String.format("    %-7s %s (%s)", method, basePath, klass.getCanonicalName());
         }
     }
 
@@ -227,7 +258,7 @@ public class DropwizardResourceConfig extends ResourceConfig {
         public int compare(EndpointLogLine endpointA, EndpointLogLine endpointB) {
             return ComparisonChain.start()
                 .compare(endpointA.basePath, endpointB.basePath)
-                .compare(endpointA.httpMethod, endpointB.httpMethod)
+                .compare(endpointA.httpMethod, endpointB.httpMethod, Comparator.nullsLast(Ordering.natural()))
                 .result();
         }
     }

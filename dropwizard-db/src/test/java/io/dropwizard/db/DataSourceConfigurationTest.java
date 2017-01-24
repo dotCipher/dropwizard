@@ -1,7 +1,7 @@
 package io.dropwizard.db;
 
 import com.google.common.io.Resources;
-import io.dropwizard.configuration.ConfigurationFactory;
+import io.dropwizard.configuration.YamlConfigurationFactory;
 import io.dropwizard.jackson.Jackson;
 import io.dropwizard.jersey.validation.Validators;
 import io.dropwizard.util.Duration;
@@ -106,9 +106,14 @@ public class DataSourceConfigurationTest {
         assertThat(ds.getUser()).isNull();
         assertThat(ds.getPassword()).isNull();
     }
+    @Test
+    public void testInitialSizeZeroIsAllowed() throws Exception {
+        DataSourceFactory ds = getDataSourceFactory("yaml/empty_initial_pool.yml");
+        assertThat(ds.getInitialSize()).isEqualTo(0);
+    }
 
     private DataSourceFactory getDataSourceFactory(String resourceName) throws Exception {
-        return new ConfigurationFactory<>(DataSourceFactory.class,
+        return new YamlConfigurationFactory<>(DataSourceFactory.class,
                 Validators.newValidator(), Jackson.newObjectMapper(), "dw")
                 .build(new File(Resources.getResource(resourceName).toURI()));
     }

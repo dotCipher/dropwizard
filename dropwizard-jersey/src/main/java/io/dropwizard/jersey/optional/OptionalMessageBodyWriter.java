@@ -3,7 +3,6 @@ package io.dropwizard.jersey.optional;
 import org.glassfish.jersey.message.MessageBodyWorkers;
 
 import javax.inject.Inject;
-import javax.ws.rs.NotFoundException;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
@@ -33,7 +32,7 @@ public class OptionalMessageBodyWriter implements MessageBodyWriter<Optional<?>>
     @Override
     public boolean isWriteable(Class<?> type, Type genericType,
                                Annotation[] annotations, MediaType mediaType) {
-        return (Optional.class.isAssignableFrom(type));
+        return Optional.class.isAssignableFrom(type);
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
@@ -47,7 +46,7 @@ public class OptionalMessageBodyWriter implements MessageBodyWriter<Optional<?>>
                         OutputStream entityStream)
             throws IOException {
         if (!entity.isPresent()) {
-            throw new NotFoundException();
+            throw EmptyOptionalException.INSTANCE;
         }
 
         final Type innerGenericType = (genericType instanceof ParameterizedType) ?

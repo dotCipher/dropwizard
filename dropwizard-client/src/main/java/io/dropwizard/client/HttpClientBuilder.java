@@ -9,9 +9,11 @@ import com.google.common.annotations.VisibleForTesting;
 import io.dropwizard.client.proxy.AuthConfiguration;
 import io.dropwizard.client.proxy.NonProxyListProxyRoutePlanner;
 import io.dropwizard.client.proxy.ProxyConfiguration;
+import io.dropwizard.client.ssl.TlsConfiguration;
 import io.dropwizard.lifecycle.Managed;
 import io.dropwizard.setup.Environment;
 import io.dropwizard.util.Duration;
+import javax.net.ssl.HostnameVerifier;
 import org.apache.http.ConnectionReuseStrategy;
 import org.apache.http.Header;
 import org.apache.http.HttpHost;
@@ -40,6 +42,7 @@ import org.apache.http.impl.client.DefaultConnectionKeepAliveStrategy;
 import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
 import org.apache.http.impl.conn.SystemDefaultDnsResolver;
 import org.apache.http.protocol.HttpContext;
+import org.apache.http.protocol.HttpProcessor;
 
 import java.util.List;
 
@@ -62,6 +65,7 @@ public class HttpClientBuilder {
     private Environment environment;
     private HttpClientConfiguration configuration = new HttpClientConfiguration();
     private DnsResolver resolver = new SystemDefaultDnsResolver();
+    private HostnameVerifier verifier;
     private HttpRequestRetryHandler httpRequestRetryHandler;
     private Registry<ConnectionSocketFactory> registry;
 
@@ -71,6 +75,7 @@ public class HttpClientBuilder {
     private RedirectStrategy redirectStrategy;
     private boolean disableContentCompression;
     private List<? extends Header> defaultHeaders;
+    private HttpProcessor httpProcessor;
 
     public HttpClientBuilder(MetricRegistry metricRegistry) {
         this.metricRegistry = metricRegistry;
@@ -112,6 +117,17 @@ public class HttpClientBuilder {
      */
     public HttpClientBuilder using(DnsResolver resolver) {
         this.resolver = resolver;
+        return this;
+    }
+
+    /**
+     * Use the give (@link HostnameVerifier} instance.
+     *
+     * @param verifier a {@link HostnameVerifier} instance
+     * @return {@code this}
+     */
+    public HttpClientBuilder using(HostnameVerifier verifier) {
+        this.verifier = verifier;
         return this;
     }
 
@@ -193,6 +209,17 @@ public class HttpClientBuilder {
     }
 
     /**
+     * Use the given {@link HttpProcessor} instance
+     *
+     * @param httpProcessor a {@link HttpProcessor} instance
+     * @return {@code} this
+     */
+    public HttpClientBuilder using(HttpProcessor httpProcessor) {
+        this.httpProcessor = httpProcessor;
+        return this;
+    }
+
+    /**
      * Disable support of decompression of responses
      *
      * @param disableContentCompression {@code true}, if disabled
@@ -240,6 +267,19 @@ public class HttpClientBuilder {
     }
 
     /**
+     * Configures an Apache {@link org.apache.http.impl.client.HttpClientBuilder HttpClientBuilder}.
+     *
+     * Intended for use by subclasses to inject HttpClientBuilder
+     * configuration. The default implementation is an identity
+     * function.
+     */
+    protected org.apache.http.impl.client.HttpClientBuilder customizeBuilder(
+        org.apache.http.impl.client.HttpClientBuilder builder
+    ) {
+        return builder;
+    }
+
+    /**
      * Map the parameters in {@link HttpClientConfiguration} to configuration on a
      * {@link org.apache.http.impl.client.HttpClientBuilder} instance
      *
@@ -276,7 +316,8 @@ public class HttpClientBuilder {
                 .setSoTimeout(timeout)
                 .build();
 
-        builder.setRequestExecutor(new InstrumentedHttpRequestExecutor(metricRegistry, metricNameStrategy, name))
+        customizeBuilder(builder)
+                .setRequestExecutor(new InstrumentedHttpRequestExecutor(metricRegistry, metricNameStrategy, name))
                 .setConnectionManager(manager)
                 .setDefaultRequestConfig(requestConfig)
                 .setDefaultSocketConfig(socketConfig)
@@ -332,6 +373,14 @@ public class HttpClientBuilder {
             builder.setDefaultHeaders(defaultHeaders);
         }
 
+        if (verifier != null) {
+            builder.setSSLHostnameVerifier(verifier);
+        }
+
+        if (httpProcessor != null) {
+            builder.setHttpProcessor(httpProcessor);
+        }
+
         return new ConfiguredCloseableHttpClient(builder.build(), requestConfig);
     }
 
@@ -371,17 +420,23 @@ public class HttpClientBuilder {
         return configureConnectionManager(manager);
     }
 
-    private Registry<ConnectionSocketFactory> createConfiguredRegistry() {
+    @VisibleForTesting
+    Registry<ConnectionSocketFactory> createConfiguredRegistry() {
         if (registry != null) {
             return registry;
         }
 
+        TlsConfiguration tlsConfiguration = configuration.getTlsConfiguration();
+        if (tlsConfiguration == null && verifier != null) {
+            tlsConfiguration = new TlsConfiguration();
+        }
+
         final SSLConnectionSocketFactory sslConnectionSocketFactory;
-        if (configuration.getTlsConfiguration() == null) {
+        if (tlsConfiguration == null) {
             sslConnectionSocketFactory = SSLConnectionSocketFactory.getSocketFactory();
         } else {
-            sslConnectionSocketFactory = new DropwizardSSLConnectionSocketFactory(configuration.getTlsConfiguration())
-                    .getSocketFactory();
+            sslConnectionSocketFactory = new DropwizardSSLConnectionSocketFactory(tlsConfiguration,
+                verifier).getSocketFactory();
         }
 
         return RegistryBuilder.<ConnectionSocketFactory>create()

@@ -15,10 +15,13 @@ import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.GenericType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
-import javax.ws.rs.ext.Provider;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Tests {@link ResourceTestRule}.
@@ -31,15 +34,15 @@ public class PersonResourceTest {
         }
     }
 
-    private static final PeopleStore dao = mock(PeopleStore.class);
+    private static final PeopleStore PEOPLE_STORE = mock(PeopleStore.class);
 
-    private static final ObjectMapper mapper = Jackson.newObjectMapper()
+    private static final ObjectMapper OBJECT_MAPPER = Jackson.newObjectMapper()
             .registerModule(new GuavaModule());
 
     @ClassRule
-    public static final ResourceTestRule resources = ResourceTestRule.builder()
-            .addResource(new PersonResource(dao))
-            .setMapper(mapper)
+    public static final ResourceTestRule RESOURCES = ResourceTestRule.builder()
+            .addResource(new PersonResource(PEOPLE_STORE))
+            .setMapper(OBJECT_MAPPER)
             .setClientConfigurator(clientConfig -> clientConfig.register(DummyExceptionMapper.class))
             .build();
 
@@ -47,39 +50,39 @@ public class PersonResourceTest {
 
     @Before
     public void setup() {
-        reset(dao);
-        when(dao.fetchPerson(eq("blah"))).thenReturn(person);
+        reset(PEOPLE_STORE);
+        when(PEOPLE_STORE.fetchPerson(eq("blah"))).thenReturn(person);
     }
 
     @Test
     public void testGetPerson() {
-        assertThat(resources.client().target("/person/blah").request()
+        assertThat(RESOURCES.target("/person/blah").request()
                 .get(Person.class))
                 .isEqualTo(person);
-        verify(dao).fetchPerson("blah");
+        verify(PEOPLE_STORE).fetchPerson("blah");
     }
 
     @Test
     public void testGetImmutableListOfPersons() {
-        assertThat(resources.client().target("/person/blah/list").request()
-                .get(new GenericType<ImmutableList<Person>>() {}))
-                .isEqualTo(ImmutableList.of(person));
+        assertThat(RESOURCES.target("/person/blah/list").request()
+            .get(new GenericType<ImmutableList<Person>>() {
+            })).isEqualTo(ImmutableList.of(person));
     }
 
     @Test
     public void testGetPersonWithQueryParam() {
         // Test to ensure that the dropwizard validator is registered so that
         // it can validate the "ind" IntParam.
-        assertThat(resources.client().target("/person/blah/index")
+        assertThat(RESOURCES.target("/person/blah/index")
             .queryParam("ind", 0).request()
             .get(Person.class))
             .isEqualTo(person);
-        verify(dao).fetchPerson("blah");
+        verify(PEOPLE_STORE).fetchPerson("blah");
     }
 
     @Test
     public void testDefaultConstraintViolation() {
-        assertThat(resources.client().target("/person/blah/index")
+        assertThat(RESOURCES.target("/person/blah/index")
             .queryParam("ind", -1).request()
             .get().readEntity(String.class))
             .isEqualTo("{\"errors\":[\"query param ind must be greater than or equal to 0\"]}");
@@ -87,7 +90,7 @@ public class PersonResourceTest {
 
     @Test
     public void testDefaultJsonProcessingMapper() {
-        assertThat(resources.client().target("/person/blah/runtime-exception")
+        assertThat(RESOURCES.target("/person/blah/runtime-exception")
             .request()
             .post(Entity.json("{ \"he: \"ho\"}"))
             .readEntity(String.class))
@@ -96,7 +99,7 @@ public class PersonResourceTest {
 
     @Test
     public void testDefaultExceptionMapper() {
-        assertThat(resources.client().target("/person/blah/runtime-exception")
+        assertThat(RESOURCES.target("/person/blah/runtime-exception")
             .request()
             .post(Entity.json("{}"))
             .readEntity(String.class))
@@ -105,7 +108,7 @@ public class PersonResourceTest {
 
     @Test
     public void testDefaultEofExceptionMapper() {
-        assertThat(resources.client().target("/person/blah/eof-exception")
+        assertThat(RESOURCES.target("/person/blah/eof-exception")
             .request()
             .get().getStatus())
             .isEqualTo(Response.Status.BAD_REQUEST.getStatusCode());
@@ -113,7 +116,7 @@ public class PersonResourceTest {
 
     @Test
     public void testValidationGroupsException() {
-        final Response resp = resources.client().target("/person/blah/validation-groups-exception")
+        final Response resp = RESOURCES.target("/person/blah/validation-groups-exception")
             .request()
             .post(Entity.json("{}"));
         assertThat(resp.getStatus()).isEqualTo(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode());
@@ -124,6 +127,6 @@ public class PersonResourceTest {
 
     @Test
     public void testCustomClientConfiguration() {
-        assertThat(resources.client().getConfiguration().isRegistered(DummyExceptionMapper.class)).isTrue();
+        assertThat(RESOURCES.client().getConfiguration().isRegistered(DummyExceptionMapper.class)).isTrue();
     }
 }

@@ -48,11 +48,12 @@ public class DbDumpCommand<T extends Configuration> extends AbstractLiquibaseCom
         this.outputStream = outputStream;
     }
 
-    public DbDumpCommand(DatabaseConfiguration<T> strategy, Class<T> configurationClass) {
+    public DbDumpCommand(DatabaseConfiguration<T> strategy, Class<T> configurationClass, String migrationsFileName) {
         super("dump",
               "Generate a dump of the existing database state.",
               strategy,
-              configurationClass);
+              configurationClass,
+              migrationsFileName);
     }
 
     @Override
@@ -210,7 +211,7 @@ public class DbDumpCommand<T extends Configuration> extends AbstractLiquibaseCom
         final SnapshotControl snapshotControl = new SnapshotControl(database,
                 compareTypes.toArray(new Class[compareTypes.size()]));
         final CompareControl compareControl = new CompareControl(new CompareControl.SchemaComparison[]{
-                new CompareControl.SchemaComparison(catalogAndSchema, catalogAndSchema)}, compareTypes);
+            new CompareControl.SchemaComparison(catalogAndSchema, catalogAndSchema)}, compareTypes);
         final CatalogAndSchema[] compareControlSchemas = compareControl
                 .getSchemas(CompareControl.DatabaseRole.REFERENCE);
 

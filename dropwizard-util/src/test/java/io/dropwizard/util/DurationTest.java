@@ -82,6 +82,12 @@ public class DurationTest {
         assertThat(Duration.parse("1m"))
                 .isEqualTo(Duration.minutes(1));
 
+        assertThat(Duration.parse("1min"))
+            .isEqualTo(Duration.minutes(1));
+
+        assertThat(Duration.parse("2mins"))
+            .isEqualTo(Duration.minutes(2));
+
         assertThat(Duration.parse("1 minute"))
                 .isEqualTo(Duration.minutes(1));
 
@@ -578,117 +584,117 @@ public class DurationTest {
         assertThat(Duration.days(-1)).isGreaterThan(Duration.days(-2));
 
         // both positive
-        assertThat(Duration.nanoseconds(1)).isLessThan(Duration.nanoseconds((2)));
-        assertThat(Duration.nanoseconds(1)).isLessThan(Duration.microseconds((2)));
-        assertThat(Duration.nanoseconds(1)).isLessThan(Duration.milliseconds((2)));
-        assertThat(Duration.nanoseconds(1)).isLessThan(Duration.seconds((2)));
-        assertThat(Duration.nanoseconds(1)).isLessThan(Duration.minutes((2)));
-        assertThat(Duration.nanoseconds(1)).isLessThan(Duration.hours((2)));
-        assertThat(Duration.nanoseconds(1)).isLessThan(Duration.days((2)));
+        assertThat(Duration.nanoseconds(1)).isLessThan(Duration.nanoseconds(2));
+        assertThat(Duration.nanoseconds(1)).isLessThan(Duration.microseconds(2));
+        assertThat(Duration.nanoseconds(1)).isLessThan(Duration.milliseconds(2));
+        assertThat(Duration.nanoseconds(1)).isLessThan(Duration.seconds(2));
+        assertThat(Duration.nanoseconds(1)).isLessThan(Duration.minutes(2));
+        assertThat(Duration.nanoseconds(1)).isLessThan(Duration.hours(2));
+        assertThat(Duration.nanoseconds(1)).isLessThan(Duration.days(2));
 
-        assertThat(Duration.microseconds(1)).isGreaterThan(Duration.nanoseconds((2)));
-        assertThat(Duration.microseconds(1)).isLessThan(Duration.microseconds((2)));
-        assertThat(Duration.microseconds(1)).isLessThan(Duration.milliseconds((2)));
-        assertThat(Duration.microseconds(1)).isLessThan(Duration.seconds((2)));
-        assertThat(Duration.microseconds(1)).isLessThan(Duration.minutes((2)));
-        assertThat(Duration.microseconds(1)).isLessThan(Duration.hours((2)));
-        assertThat(Duration.microseconds(1)).isLessThan(Duration.days((2)));
+        assertThat(Duration.microseconds(1)).isGreaterThan(Duration.nanoseconds(2));
+        assertThat(Duration.microseconds(1)).isLessThan(Duration.microseconds(2));
+        assertThat(Duration.microseconds(1)).isLessThan(Duration.milliseconds(2));
+        assertThat(Duration.microseconds(1)).isLessThan(Duration.seconds(2));
+        assertThat(Duration.microseconds(1)).isLessThan(Duration.minutes(2));
+        assertThat(Duration.microseconds(1)).isLessThan(Duration.hours(2));
+        assertThat(Duration.microseconds(1)).isLessThan(Duration.days(2));
 
-        assertThat(Duration.milliseconds(1)).isGreaterThan(Duration.nanoseconds((2)));
-        assertThat(Duration.milliseconds(1)).isGreaterThan(Duration.microseconds((2)));
-        assertThat(Duration.milliseconds(1)).isLessThan(Duration.milliseconds((2)));
-        assertThat(Duration.milliseconds(1)).isLessThan(Duration.seconds((2)));
-        assertThat(Duration.milliseconds(1)).isLessThan(Duration.minutes((2)));
-        assertThat(Duration.milliseconds(1)).isLessThan(Duration.hours((2)));
-        assertThat(Duration.milliseconds(1)).isLessThan(Duration.days((2)));
+        assertThat(Duration.milliseconds(1)).isGreaterThan(Duration.nanoseconds(2));
+        assertThat(Duration.milliseconds(1)).isGreaterThan(Duration.microseconds(2));
+        assertThat(Duration.milliseconds(1)).isLessThan(Duration.milliseconds(2));
+        assertThat(Duration.milliseconds(1)).isLessThan(Duration.seconds(2));
+        assertThat(Duration.milliseconds(1)).isLessThan(Duration.minutes(2));
+        assertThat(Duration.milliseconds(1)).isLessThan(Duration.hours(2));
+        assertThat(Duration.milliseconds(1)).isLessThan(Duration.days(2));
 
-        assertThat(Duration.seconds(1)).isGreaterThan(Duration.nanoseconds((2)));
-        assertThat(Duration.seconds(1)).isGreaterThan(Duration.microseconds((2)));
-        assertThat(Duration.seconds(1)).isGreaterThan(Duration.milliseconds((2)));
-        assertThat(Duration.seconds(1)).isLessThan(Duration.seconds((2)));
-        assertThat(Duration.seconds(1)).isLessThan(Duration.minutes((2)));
-        assertThat(Duration.seconds(1)).isLessThan(Duration.hours((2)));
-        assertThat(Duration.seconds(1)).isLessThan(Duration.days((2)));
+        assertThat(Duration.seconds(1)).isGreaterThan(Duration.nanoseconds(2));
+        assertThat(Duration.seconds(1)).isGreaterThan(Duration.microseconds(2));
+        assertThat(Duration.seconds(1)).isGreaterThan(Duration.milliseconds(2));
+        assertThat(Duration.seconds(1)).isLessThan(Duration.seconds(2));
+        assertThat(Duration.seconds(1)).isLessThan(Duration.minutes(2));
+        assertThat(Duration.seconds(1)).isLessThan(Duration.hours(2));
+        assertThat(Duration.seconds(1)).isLessThan(Duration.days(2));
 
-        assertThat(Duration.minutes(1)).isGreaterThan(Duration.nanoseconds((2)));
-        assertThat(Duration.minutes(1)).isGreaterThan(Duration.microseconds((2)));
-        assertThat(Duration.minutes(1)).isGreaterThan(Duration.milliseconds((2)));
-        assertThat(Duration.minutes(1)).isGreaterThan(Duration.seconds((2)));
-        assertThat(Duration.minutes(1)).isLessThan(Duration.minutes((2)));
-        assertThat(Duration.minutes(1)).isLessThan(Duration.hours((2)));
-        assertThat(Duration.minutes(1)).isLessThan(Duration.days((2)));
+        assertThat(Duration.minutes(1)).isGreaterThan(Duration.nanoseconds(2));
+        assertThat(Duration.minutes(1)).isGreaterThan(Duration.microseconds(2));
+        assertThat(Duration.minutes(1)).isGreaterThan(Duration.milliseconds(2));
+        assertThat(Duration.minutes(1)).isGreaterThan(Duration.seconds(2));
+        assertThat(Duration.minutes(1)).isLessThan(Duration.minutes(2));
+        assertThat(Duration.minutes(1)).isLessThan(Duration.hours(2));
+        assertThat(Duration.minutes(1)).isLessThan(Duration.days(2));
 
-        assertThat(Duration.hours(1)).isGreaterThan(Duration.nanoseconds((2)));
-        assertThat(Duration.hours(1)).isGreaterThan(Duration.microseconds((2)));
-        assertThat(Duration.hours(1)).isGreaterThan(Duration.milliseconds((2)));
-        assertThat(Duration.hours(1)).isGreaterThan(Duration.seconds((2)));
-        assertThat(Duration.hours(1)).isGreaterThan(Duration.minutes((2)));
-        assertThat(Duration.hours(1)).isLessThan(Duration.hours((2)));
-        assertThat(Duration.hours(1)).isLessThan(Duration.days((2)));
+        assertThat(Duration.hours(1)).isGreaterThan(Duration.nanoseconds(2));
+        assertThat(Duration.hours(1)).isGreaterThan(Duration.microseconds(2));
+        assertThat(Duration.hours(1)).isGreaterThan(Duration.milliseconds(2));
+        assertThat(Duration.hours(1)).isGreaterThan(Duration.seconds(2));
+        assertThat(Duration.hours(1)).isGreaterThan(Duration.minutes(2));
+        assertThat(Duration.hours(1)).isLessThan(Duration.hours(2));
+        assertThat(Duration.hours(1)).isLessThan(Duration.days(2));
 
-        assertThat(Duration.days(1)).isGreaterThan(Duration.nanoseconds((2)));
-        assertThat(Duration.days(1)).isGreaterThan(Duration.microseconds((2)));
-        assertThat(Duration.days(1)).isGreaterThan(Duration.milliseconds((2)));
-        assertThat(Duration.days(1)).isGreaterThan(Duration.seconds((2)));
-        assertThat(Duration.days(1)).isGreaterThan(Duration.minutes((2)));
-        assertThat(Duration.days(1)).isGreaterThan(Duration.hours((2)));
-        assertThat(Duration.days(1)).isLessThan(Duration.days((2)));
+        assertThat(Duration.days(1)).isGreaterThan(Duration.nanoseconds(2));
+        assertThat(Duration.days(1)).isGreaterThan(Duration.microseconds(2));
+        assertThat(Duration.days(1)).isGreaterThan(Duration.milliseconds(2));
+        assertThat(Duration.days(1)).isGreaterThan(Duration.seconds(2));
+        assertThat(Duration.days(1)).isGreaterThan(Duration.minutes(2));
+        assertThat(Duration.days(1)).isGreaterThan(Duration.hours(2));
+        assertThat(Duration.days(1)).isLessThan(Duration.days(2));
 
-        assertThat(Duration.nanoseconds(2)).isGreaterThan(Duration.nanoseconds((1)));
-        assertThat(Duration.nanoseconds(2)).isLessThan(Duration.microseconds((1)));
-        assertThat(Duration.nanoseconds(2)).isLessThan(Duration.milliseconds((1)));
-        assertThat(Duration.nanoseconds(2)).isLessThan(Duration.seconds((1)));
-        assertThat(Duration.nanoseconds(2)).isLessThan(Duration.minutes((1)));
-        assertThat(Duration.nanoseconds(2)).isLessThan(Duration.hours((1)));
-        assertThat(Duration.nanoseconds(2)).isLessThan(Duration.days((1)));
+        assertThat(Duration.nanoseconds(2)).isGreaterThan(Duration.nanoseconds(1));
+        assertThat(Duration.nanoseconds(2)).isLessThan(Duration.microseconds(1));
+        assertThat(Duration.nanoseconds(2)).isLessThan(Duration.milliseconds(1));
+        assertThat(Duration.nanoseconds(2)).isLessThan(Duration.seconds(1));
+        assertThat(Duration.nanoseconds(2)).isLessThan(Duration.minutes(1));
+        assertThat(Duration.nanoseconds(2)).isLessThan(Duration.hours(1));
+        assertThat(Duration.nanoseconds(2)).isLessThan(Duration.days(1));
 
-        assertThat(Duration.microseconds(2)).isGreaterThan(Duration.nanoseconds((1)));
-        assertThat(Duration.microseconds(2)).isGreaterThan(Duration.microseconds((1)));
-        assertThat(Duration.microseconds(2)).isLessThan(Duration.milliseconds((1)));
-        assertThat(Duration.microseconds(2)).isLessThan(Duration.seconds((1)));
-        assertThat(Duration.microseconds(2)).isLessThan(Duration.minutes((1)));
-        assertThat(Duration.microseconds(2)).isLessThan(Duration.hours((1)));
-        assertThat(Duration.microseconds(2)).isLessThan(Duration.days((1)));
+        assertThat(Duration.microseconds(2)).isGreaterThan(Duration.nanoseconds(1));
+        assertThat(Duration.microseconds(2)).isGreaterThan(Duration.microseconds(1));
+        assertThat(Duration.microseconds(2)).isLessThan(Duration.milliseconds(1));
+        assertThat(Duration.microseconds(2)).isLessThan(Duration.seconds(1));
+        assertThat(Duration.microseconds(2)).isLessThan(Duration.minutes(1));
+        assertThat(Duration.microseconds(2)).isLessThan(Duration.hours(1));
+        assertThat(Duration.microseconds(2)).isLessThan(Duration.days(1));
 
-        assertThat(Duration.milliseconds(2)).isGreaterThan(Duration.nanoseconds((1)));
-        assertThat(Duration.milliseconds(2)).isGreaterThan(Duration.microseconds((1)));
-        assertThat(Duration.milliseconds(2)).isGreaterThan(Duration.milliseconds((1)));
-        assertThat(Duration.milliseconds(2)).isLessThan(Duration.seconds((1)));
-        assertThat(Duration.milliseconds(2)).isLessThan(Duration.minutes((1)));
-        assertThat(Duration.milliseconds(2)).isLessThan(Duration.hours((1)));
-        assertThat(Duration.milliseconds(2)).isLessThan(Duration.days((1)));
+        assertThat(Duration.milliseconds(2)).isGreaterThan(Duration.nanoseconds(1));
+        assertThat(Duration.milliseconds(2)).isGreaterThan(Duration.microseconds(1));
+        assertThat(Duration.milliseconds(2)).isGreaterThan(Duration.milliseconds(1));
+        assertThat(Duration.milliseconds(2)).isLessThan(Duration.seconds(1));
+        assertThat(Duration.milliseconds(2)).isLessThan(Duration.minutes(1));
+        assertThat(Duration.milliseconds(2)).isLessThan(Duration.hours(1));
+        assertThat(Duration.milliseconds(2)).isLessThan(Duration.days(1));
 
-        assertThat(Duration.seconds(2)).isGreaterThan(Duration.nanoseconds((1)));
-        assertThat(Duration.seconds(2)).isGreaterThan(Duration.microseconds((1)));
-        assertThat(Duration.seconds(2)).isGreaterThan(Duration.milliseconds((1)));
-        assertThat(Duration.seconds(2)).isGreaterThan(Duration.seconds((1)));
-        assertThat(Duration.seconds(2)).isLessThan(Duration.minutes((1)));
-        assertThat(Duration.seconds(2)).isLessThan(Duration.hours((1)));
-        assertThat(Duration.seconds(2)).isLessThan(Duration.days((1)));
+        assertThat(Duration.seconds(2)).isGreaterThan(Duration.nanoseconds(1));
+        assertThat(Duration.seconds(2)).isGreaterThan(Duration.microseconds(1));
+        assertThat(Duration.seconds(2)).isGreaterThan(Duration.milliseconds(1));
+        assertThat(Duration.seconds(2)).isGreaterThan(Duration.seconds(1));
+        assertThat(Duration.seconds(2)).isLessThan(Duration.minutes(1));
+        assertThat(Duration.seconds(2)).isLessThan(Duration.hours(1));
+        assertThat(Duration.seconds(2)).isLessThan(Duration.days(1));
 
-        assertThat(Duration.minutes(2)).isGreaterThan(Duration.nanoseconds((1)));
-        assertThat(Duration.minutes(2)).isGreaterThan(Duration.microseconds((1)));
-        assertThat(Duration.minutes(2)).isGreaterThan(Duration.milliseconds((1)));
-        assertThat(Duration.minutes(2)).isGreaterThan(Duration.seconds((1)));
-        assertThat(Duration.minutes(2)).isGreaterThan(Duration.minutes((1)));
-        assertThat(Duration.minutes(2)).isLessThan(Duration.hours((1)));
-        assertThat(Duration.minutes(2)).isLessThan(Duration.days((1)));
+        assertThat(Duration.minutes(2)).isGreaterThan(Duration.nanoseconds(1));
+        assertThat(Duration.minutes(2)).isGreaterThan(Duration.microseconds(1));
+        assertThat(Duration.minutes(2)).isGreaterThan(Duration.milliseconds(1));
+        assertThat(Duration.minutes(2)).isGreaterThan(Duration.seconds(1));
+        assertThat(Duration.minutes(2)).isGreaterThan(Duration.minutes(1));
+        assertThat(Duration.minutes(2)).isLessThan(Duration.hours(1));
+        assertThat(Duration.minutes(2)).isLessThan(Duration.days(1));
 
-        assertThat(Duration.hours(2)).isGreaterThan(Duration.nanoseconds((1)));
-        assertThat(Duration.hours(2)).isGreaterThan(Duration.microseconds((1)));
-        assertThat(Duration.hours(2)).isGreaterThan(Duration.milliseconds((1)));
-        assertThat(Duration.hours(2)).isGreaterThan(Duration.seconds((1)));
-        assertThat(Duration.hours(2)).isGreaterThan(Duration.minutes((1)));
-        assertThat(Duration.hours(2)).isGreaterThan(Duration.hours((1)));
-        assertThat(Duration.hours(2)).isLessThan(Duration.days((1)));
+        assertThat(Duration.hours(2)).isGreaterThan(Duration.nanoseconds(1));
+        assertThat(Duration.hours(2)).isGreaterThan(Duration.microseconds(1));
+        assertThat(Duration.hours(2)).isGreaterThan(Duration.milliseconds(1));
+        assertThat(Duration.hours(2)).isGreaterThan(Duration.seconds(1));
+        assertThat(Duration.hours(2)).isGreaterThan(Duration.minutes(1));
+        assertThat(Duration.hours(2)).isGreaterThan(Duration.hours(1));
+        assertThat(Duration.hours(2)).isLessThan(Duration.days(1));
 
-        assertThat(Duration.days(2)).isGreaterThan(Duration.nanoseconds((1)));
-        assertThat(Duration.days(2)).isGreaterThan(Duration.microseconds((1)));
-        assertThat(Duration.days(2)).isGreaterThan(Duration.milliseconds((1)));
-        assertThat(Duration.days(2)).isGreaterThan(Duration.seconds((1)));
-        assertThat(Duration.days(2)).isGreaterThan(Duration.minutes((1)));
-        assertThat(Duration.days(2)).isGreaterThan(Duration.hours((1)));
-        assertThat(Duration.days(2)).isGreaterThan(Duration.days((1)));
+        assertThat(Duration.days(2)).isGreaterThan(Duration.nanoseconds(1));
+        assertThat(Duration.days(2)).isGreaterThan(Duration.microseconds(1));
+        assertThat(Duration.days(2)).isGreaterThan(Duration.milliseconds(1));
+        assertThat(Duration.days(2)).isGreaterThan(Duration.seconds(1));
+        assertThat(Duration.days(2)).isGreaterThan(Duration.minutes(1));
+        assertThat(Duration.days(2)).isGreaterThan(Duration.hours(1));
+        assertThat(Duration.days(2)).isGreaterThan(Duration.days(1));
 
         // one negative, one positive
         assertThat(Duration.nanoseconds(-1)).isLessThan(Duration.nanoseconds(1));

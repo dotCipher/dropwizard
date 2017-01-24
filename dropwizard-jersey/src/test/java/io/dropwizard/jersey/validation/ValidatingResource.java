@@ -6,6 +6,7 @@ import io.dropwizard.jersey.jackson.JacksonMessageBodyProviderTest.Partial1;
 import io.dropwizard.jersey.jackson.JacksonMessageBodyProviderTest.Partial2;
 import io.dropwizard.jersey.jackson.JacksonMessageBodyProviderTest.PartialExample;
 import io.dropwizard.jersey.params.IntParam;
+import io.dropwizard.jersey.params.LongParam;
 import io.dropwizard.jersey.params.NonEmptyStringParam;
 import io.dropwizard.validation.Validated;
 import org.hibernate.validator.constraints.Email;
@@ -18,7 +19,19 @@ import javax.validation.Valid;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
-import javax.ws.rs.*;
+import javax.validation.constraints.Pattern;
+import javax.ws.rs.BeanParam;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.CookieParam;
+import javax.ws.rs.FormParam;
+import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
+import javax.ws.rs.MatrixParam;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import java.util.Collection;
@@ -30,6 +43,11 @@ import java.util.Set;
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class ValidatingResource {
+
+    @QueryParam("sort")
+    @Pattern(regexp = "^(asc|desc)$")
+    private String sortParam;
+
     @POST
     @Path("foo")
     @Valid
@@ -56,6 +74,12 @@ public class ValidatingResource {
     @Length(max = 3)
     public String blaze(@QueryParam("name") @Length(min = 3) String name) {
         return name;
+    }
+
+    @GET
+    @Path("paramValidation")
+    public String paramValidation(@UnwrapValidatedValue @NotNull @Min(2) @Max(5) @QueryParam("length") LongParam length) {
+        return Long.toString(length.get());
     }
 
     @GET
@@ -230,4 +254,11 @@ public class ValidatingResource {
     public FailingExample valmeth(@Valid FailingExample exam) {
         return exam;
     }
+
+    @GET
+    @Path("enumParam")
+    public String enumParam(@NotNull @QueryParam("choice") Choice choice) {
+        return choice.toString();
+    }
+
 }

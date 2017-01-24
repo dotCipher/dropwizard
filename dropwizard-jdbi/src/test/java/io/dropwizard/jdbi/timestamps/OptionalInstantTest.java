@@ -36,7 +36,7 @@ public class OptionalInstantTest {
         dataSourceFactory.setInitialSize(1);
         final DBI dbi = new DBIFactory().build(env, dataSourceFactory, "test");
         try (Handle h = dbi.open()) {
-            h.execute("CREATE TABLE tasks (" +
+            h.execute("CREATE TABLE IF NOT EXISTS tasks (" +
                     "id INT PRIMARY KEY, " +
                     "assignee VARCHAR(255) NOT NULL, " +
                     "start_date TIMESTAMP, " +
@@ -51,7 +51,7 @@ public class OptionalInstantTest {
     public void testPresent() {
         final Instant startDate = Instant.now();
         final Instant endDate = startDate.plus(1L, ChronoUnit.DAYS);
-        dao.insert(1, Optional.of("John Hughes"), startDate, Optional.of(endDate), Optional.<String>empty());
+        dao.insert(1, Optional.of("John Hughes"), startDate, Optional.of(endDate), Optional.empty());
 
         assertThat(dao.findEndDateById(1).get()).isEqualTo(endDate);
     }
@@ -59,7 +59,7 @@ public class OptionalInstantTest {
     @Test
     public void testAbsent() {
         dao.insert(2, Optional.of("Kate Johansen"), Instant.now(),
-                Optional.<Instant>empty(), Optional.of("To be done"));
+                Optional.empty(), Optional.of("To be done"));
 
         assertThat(dao.findEndDateById(2).isPresent()).isFalse();
     }

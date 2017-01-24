@@ -1,8 +1,8 @@
 package io.dropwizard.db;
 
 import com.codahale.metrics.MetricRegistry;
-import io.dropwizard.configuration.ConfigurationFactory;
 import io.dropwizard.configuration.ResourceConfigurationSourceProvider;
+import io.dropwizard.configuration.YamlConfigurationFactory;
 import io.dropwizard.jackson.Jackson;
 import io.dropwizard.util.Duration;
 import io.dropwizard.validation.BaseValidator;
@@ -43,6 +43,14 @@ public class DataSourceFactoryTest {
         dataSource = factory.build(metricRegistry, "test");
         dataSource.start();
         return dataSource;
+    }
+
+    @Test
+    public void testInitialSizeIsZero() throws Exception {
+        factory.setUrl("nonsense invalid url");
+        factory.setInitialSize(0);
+        ManagedDataSource dataSource = factory.build(metricRegistry, "test");
+        dataSource.start();
     }
 
     @Test
@@ -92,7 +100,7 @@ public class DataSourceFactoryTest {
         try (Connection connection = dataSource().getConnection()) {
             try (PreparedStatement statement = connection.prepareStatement("select 1")) {
                 try (ResultSet rs = statement.executeQuery()) {
-                    assertThat(rs.next());
+                    assertThat(rs.next()).isTrue();
                     assertThat(rs.getInt(1)).isEqualTo(1);
                 }
             }
@@ -102,7 +110,7 @@ public class DataSourceFactoryTest {
 
     @Test
     public void createDefaultFactory() throws Exception {
-        final DataSourceFactory factory = new ConfigurationFactory<>(DataSourceFactory.class,
+        final DataSourceFactory factory = new YamlConfigurationFactory<>(DataSourceFactory.class,
             BaseValidator.newValidator(), Jackson.newObjectMapper(), "dw")
             .build(new ResourceConfigurationSourceProvider(), "yaml/minimal_db_pool.yml");
 

@@ -7,13 +7,14 @@ import io.dropwizard.auth.AuthDynamicFeature;
 import io.dropwizard.auth.AuthValueFactoryProvider;
 import io.dropwizard.auth.basic.BasicCredentialAuthFilter;
 import io.dropwizard.testing.junit.ResourceTestRule;
-import javax.ws.rs.ForbiddenException;
-import javax.ws.rs.NotAuthorizedException;
-import javax.ws.rs.core.HttpHeaders;
 import org.glassfish.jersey.server.filter.RolesAllowedDynamicFeature;
 import org.glassfish.jersey.test.grizzly.GrizzlyWebTestContainerFactory;
 import org.junit.ClassRule;
 import org.junit.Test;
+
+import javax.ws.rs.ForbiddenException;
+import javax.ws.rs.NotAuthorizedException;
+import javax.ws.rs.core.HttpHeaders;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.failBecauseExceptionWasNotThrown;
@@ -38,7 +39,7 @@ public class ProtectedResourceTest {
 
     @Test
     public void testProtectedEndpoint() {
-        String secret = RULE.getJerseyTest().target("/protected").request()
+        String secret = RULE.target("/protected").request()
                 .header(HttpHeaders.AUTHORIZATION, "Basic Z29vZC1ndXk6c2VjcmV0")
                 .get(String.class);
         assertThat(secret).startsWith("Hey there, good-guy. You know the secret!");
@@ -47,8 +48,8 @@ public class ProtectedResourceTest {
     @Test
     public void testProtectedEndpointNoCredentials401() {
         try {
-             RULE.getJerseyTest().target("/protected").request()
-                    .get(String.class);
+            RULE.target("/protected").request()
+                .get(String.class);
             failBecauseExceptionWasNotThrown(NotAuthorizedException.class);
         } catch (NotAuthorizedException e) {
             assertThat(e.getResponse().getStatus()).isEqualTo(401);
@@ -61,7 +62,7 @@ public class ProtectedResourceTest {
     @Test
     public void testProtectedEndpointBadCredentials401() {
         try {
-            RULE.getJerseyTest().target("/protected").request()
+            RULE.target("/protected").request()
                 .header(HttpHeaders.AUTHORIZATION, "Basic c25lYWt5LWJhc3RhcmQ6YXNkZg==")
                 .get(String.class);
             failBecauseExceptionWasNotThrown(NotAuthorizedException.class);
@@ -75,7 +76,7 @@ public class ProtectedResourceTest {
 
     @Test
     public void testProtectedAdminEndpoint() {
-        String secret = RULE.getJerseyTest().target("/protected/admin").request()
+        String secret = RULE.target("/protected/admin").request()
                 .header(HttpHeaders.AUTHORIZATION, "Basic Y2hpZWYtd2l6YXJkOnNlY3JldA==")
                 .get(String.class);
         assertThat(secret).startsWith("Hey there, chief-wizard. It looks like you are an admin.");
@@ -84,7 +85,7 @@ public class ProtectedResourceTest {
     @Test
     public void testProtectedAdminEndpointPrincipalIsNotAuthorized403() {
         try {
-            RULE.getJerseyTest().target("/protected/admin").request()
+            RULE.target("/protected/admin").request()
                     .header(HttpHeaders.AUTHORIZATION, "Basic Z29vZC1ndXk6c2VjcmV0")
                     .get(String.class);
             failBecauseExceptionWasNotThrown(ForbiddenException.class);

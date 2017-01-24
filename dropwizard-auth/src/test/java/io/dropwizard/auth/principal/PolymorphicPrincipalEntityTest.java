@@ -2,7 +2,10 @@ package io.dropwizard.auth.principal;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import io.dropwizard.auth.*;
+import io.dropwizard.auth.AbstractAuthResourceConfig;
+import io.dropwizard.auth.Authenticator;
+import io.dropwizard.auth.PolymorphicAuthDynamicFeature;
+import io.dropwizard.auth.PolymorphicAuthValueFactoryProvider;
 import io.dropwizard.auth.basic.BasicCredentialAuthFilter;
 import io.dropwizard.auth.basic.BasicCredentials;
 import io.dropwizard.logging.BootstrapLogging;
@@ -15,13 +18,9 @@ import org.glassfish.jersey.test.TestProperties;
 import org.junit.Test;
 
 import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.client.Entity;
-import javax.ws.rs.container.ContainerRequestContext;
 import javax.ws.rs.container.ContainerRequestFilter;
 import javax.ws.rs.container.DynamicFeature;
 import javax.ws.rs.core.HttpHeaders;
-import javax.ws.rs.core.MediaType;
-import java.io.IOException;
 import java.security.Principal;
 import java.util.Optional;
 
@@ -117,8 +116,8 @@ public class PolymorphicPrincipalEntityTest extends JerseyTest {
     @Test
     public void jsonPrincipalEntityResourceNoAuth401() {
         try {
-          target("/auth-test/json-principal-entity").request().get(String.class);
-          failBecauseExceptionWasNotThrown(WebApplicationException.class);
+            target("/auth-test/json-principal-entity").request().get(String.class);
+            failBecauseExceptionWasNotThrown(WebApplicationException.class);
         } catch (WebApplicationException e) {
             assertThat(e.getResponse().getStatus()).isEqualTo(401);
         }
@@ -135,8 +134,8 @@ public class PolymorphicPrincipalEntityTest extends JerseyTest {
     @Test
     public void nullPrincipalEntityResourceNoAuth401() {
         try {
-          target("/auth-test/null-principal-entity").request().get(String.class);
-          failBecauseExceptionWasNotThrown(WebApplicationException.class);
+            target("/auth-test/null-principal-entity").request().get(String.class);
+            failBecauseExceptionWasNotThrown(WebApplicationException.class);
         } catch (WebApplicationException e) {
             assertThat(e.getResponse().getStatus()).isEqualTo(401);
         }

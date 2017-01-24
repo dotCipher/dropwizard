@@ -1,13 +1,11 @@
 package io.dropwizard.hibernate;
 
 import com.google.common.collect.ImmutableMap;
-import javassist.util.proxy.MethodHandler;
 import javassist.util.proxy.Proxy;
 import javassist.util.proxy.ProxyFactory;
 import org.hibernate.SessionFactory;
 
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 
 /**
  * A factory for creating proxies for components that use Hibernate data access objects
@@ -73,25 +71,24 @@ public class UnitOfWorkAwareProxyFactory {
 
         try {
             final Proxy proxy = (Proxy) (constructorParamTypes.length == 0 ?
-                    factory.createClass().newInstance() :
+                    factory.createClass().getConstructor().newInstance() :
                     factory.create(constructorParamTypes, constructorArguments));
-            proxy.setHandler(new MethodHandler() {
-                @Override
-                public Object invoke(Object self, Method overridden, Method proceed, Object[] args) throws Throwable {
-                    final UnitOfWork unitOfWork = overridden.getAnnotation(UnitOfWork.class);
-                    final UnitOfWorkAspect unitOfWorkAspect = new UnitOfWorkAspect(sessionFactories);
-                    try {
-                        unitOfWorkAspect.beforeStart(unitOfWork);
-                        Object result = proceed.invoke(self, args);
-                        unitOfWorkAspect.afterEnd();
-                        return result;
-                    } catch (InvocationTargetException e) {
-                        unitOfWorkAspect.onError();
-                        throw e.getCause();
-                    } catch (Exception e) {
-                        unitOfWorkAspect.onError();
-                        throw e;
-                    }
+            proxy.setHandler((self, overridden, proceed, args) -> {
+                final UnitOfWork unitOfWork = overridden.getAnnotation(UnitOfWork.class);
+                final UnitOfWorkAspect unitOfWorkAspect = newAspect(sessionFactories);
+                try {
+                    unitOfWorkAspect.beforeStart(unitOfWork);
+                    Object result = proceed.invoke(self, args);
+                    unitOfWorkAspect.afterEnd();
+                    return result;
+                } catch (InvocationTargetException e) {
+                    unitOfWorkAspect.onError();
+                    throw e.getCause();
+                } catch (Exception e) {
+                    unitOfWorkAspect.onError();
+                    throw e;
+                } finally {
+                    unitOfWorkAspect.onFinish();
                 }
             });
             return (T) proxy;
@@ -99,5 +96,20 @@ public class UnitOfWorkAwareProxyFactory {
                 InvocationTargetException e) {
             throw new IllegalStateException("Unable to create a proxy for the class '" + clazz + "'", e);
         }
+    }
+
+    /**
+     * @return a new aspect
+     */
+    public UnitOfWorkAspect newAspect() {
+        return new UnitOfWorkAspect(sessionFactories);
+    }
+
+    /**
+     * @return a new aspect
+     * @param sessionFactories
+     */
+    public UnitOfWorkAspect newAspect(ImmutableMap<String, SessionFactory> sessionFactories) {
+        return new UnitOfWorkAspect(sessionFactories);
     }
 }

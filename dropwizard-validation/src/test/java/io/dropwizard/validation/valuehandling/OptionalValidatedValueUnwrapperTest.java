@@ -14,6 +14,9 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+// Dropwizard used to supply its own Java 8 optional validator but since
+// Hibernate Validator 5.2, it's built in, so the class was removed but
+// the test class stays to ensure behavior remains
 public class OptionalValidatedValueUnwrapperTest {
 
     public static class Example {
@@ -30,7 +33,6 @@ public class OptionalValidatedValueUnwrapperTest {
     private final Validator validator = Validation
             .byProvider(HibernateValidator.class)
             .configure()
-            .addValidatedValueHandler(new OptionalValidatedValueUnwrapper())
             .buildValidatorFactory()
             .getValidator();
 
@@ -50,14 +52,6 @@ public class OptionalValidatedValueUnwrapperTest {
     }
 
     @Test
-    public void succeedsWhenPresentButNull() {
-        Example example = new Example();
-        example.three = Optional.ofNullable(null);
-        Set<ConstraintViolation<Example>> violations = validator.validate(example);
-        assertThat(violations).isEmpty();
-    }
-
-    @Test
     public void succeedsWhenConstraintsMet() {
         Example example = new Example();
         example.three = Optional.of(10);
@@ -69,14 +63,6 @@ public class OptionalValidatedValueUnwrapperTest {
     public void notNullFailsWhenAbsent() {
         Example example = new Example();
         example.notNull = Optional.empty();
-        Set<ConstraintViolation<Example>> violations = validator.validate(example);
-        assertThat(violations).hasSize(1);
-    }
-
-    @Test
-    public void notNullFailsWhenPresentButNull() {
-        Example example = new Example();
-        example.notNull = Optional.ofNullable(null);
         Set<ConstraintViolation<Example>> violations = validator.validate(example);
         assertThat(violations).hasSize(1);
     }

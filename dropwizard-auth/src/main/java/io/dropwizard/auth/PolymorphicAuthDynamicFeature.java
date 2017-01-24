@@ -3,19 +3,17 @@ package io.dropwizard.auth;
 import com.google.common.collect.ImmutableMap;
 import org.glassfish.jersey.server.model.AnnotatedMethod;
 
-import java.lang.annotation.Annotation;
-import java.security.Principal;
 import javax.ws.rs.container.ContainerRequestFilter;
 import javax.ws.rs.container.DynamicFeature;
 import javax.ws.rs.container.ResourceInfo;
 import javax.ws.rs.core.FeatureContext;
+import java.lang.annotation.Annotation;
+import java.security.Principal;
 
 /**
  * A {@link DynamicFeature} that registers the provided auth filters
  * to resource methods annotated with the {@link Auth} according to
  * the type of the annotated method parameter.
- * <p>Note that this feature only pertains to <i>authentication</i>.
- * To enable authorization, use {@link AuthDynamicFeature}.</p>
  */
 public class PolymorphicAuthDynamicFeature<T extends Principal> implements DynamicFeature {
 
@@ -36,8 +34,8 @@ public class PolymorphicAuthDynamicFeature<T extends Principal> implements Dynam
         for (int i = 0; i < parameterAnnotations.length; i++) {
             for (final Annotation annotation : parameterAnnotations[i]) {
                 if (annotation instanceof Auth && authFilterMap.containsKey(parameterTypes[i])) {
-                  context.register(authFilterMap.get(parameterTypes[i]));
-                  return;
+                    context.register(authFilterMap.get(parameterTypes[i]));
+                    return;
                 }
             }
         }

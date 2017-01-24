@@ -8,7 +8,7 @@ import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import io.dropwizard.jackson.Jackson;
-import org.glassfish.jersey.filter.LoggingFilter;
+import org.glassfish.jersey.logging.LoggingFeature;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -90,7 +90,7 @@ public class JerseyClientIntegrationTest {
                 assertThat(requestHeaders.get(HttpHeaders.CONTENT_LENGTH)).containsExactly("58");
                 assertThat(requestHeaders.get(TRANSFER_ENCODING)).isNull();
                 assertThat(requestHeaders.get(HttpHeaders.CONTENT_ENCODING)).containsExactly(GZIP);
-                assertThat(requestHeaders.get(HttpHeaders.ACCEPT_ENCODING));
+                assertThat(requestHeaders.get(HttpHeaders.ACCEPT_ENCODING)).containsExactly(GZIP_DEFLATE);
 
                 checkBody(httpExchange, true);
                 postResponse(httpExchange);
@@ -296,7 +296,7 @@ public class JerseyClientIntegrationTest {
         String uri = "http://127.0.0.1:" + httpServer.getAddress().getPort() + "/test";
 
         WebTarget target = jersey.target(uri);
-        target.register(new LoggingFilter());
+        target.register(new LoggingFeature());
         String firstResponse = target.request()
                 .buildGet()
                 .invoke()

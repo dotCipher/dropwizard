@@ -25,12 +25,15 @@ public class CloseableLiquibaseTest {
         factory.setUser("DbTest");
 
         dataSource = (ManagedPooledDataSource) factory.build(new MetricRegistry(), "DbTest");
-        liquibase = new CloseableLiquibase(dataSource);
+        liquibase = new CloseableLiquibaseWithClassPathMigrationsFile(dataSource, "migrations.xml");
     }
 
     @Test
     public void testWhenClosingAllConnectionsInPoolIsReleased() throws Exception {
+
         ConnectionPool pool = dataSource.getPool();
+        assertThat(pool.getActive()).isEqualTo(1);
+
         liquibase.close();
 
         assertThat(pool.getActive()).isZero();

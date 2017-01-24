@@ -188,7 +188,7 @@ loads a given resource instance in an in-memory Jersey server:
 
         @Test
         public void testGetPerson() {
-            assertThat(resources.client().target("/person/blah").request().get(Person.class))
+            assertThat(resources.target("/person/blah").request().get(Person.class))
                     .isEqualTo(person);
             verify(dao).fetchPerson("blah");
         }
@@ -199,7 +199,7 @@ want to test via ``ResourceTestRule.Builder#addResource(Object)``. Use a ``@Clas
 to have the rule wrap the entire test class or the ``@Rule`` annotation to have the rule wrap
 each test individually (make sure to remove static final modifier from ``resources``).
 
-In your tests, use ``#client()``, which returns a Jersey ``Client`` instance to talk to and test
+In your tests, use ``#target(String path)``, which initializes a request to talk to and test
 your instances.
 
 This doesn't require opening a port, but ``ResourceTestRule`` tests will perform all the serialization,
@@ -266,7 +266,7 @@ dependency for the Jersey Test Framework providers to your Maven POM and set ``G
 
         @Test
         public void testResource() {
-            assertThat(RULE.getJerseyTest().target("/example").request()
+            assertThat(RULE.target("/example").request()
                 .get(String.class))
                 .isEqualTo("example");
         }
@@ -338,6 +338,10 @@ running and stop it again when they've completed (roughly equivalent to having u
 ``DropwizardAppRule`` also exposes the app's ``Configuration``,
 ``Environment`` and the app object itself so that these can be queried by the tests.
 
+If you don't want to use the ``dropwizard-client`` module or find it excessive for testing, you can get access to
+a Jersey HTTP client by calling the `client` method on the rule. The returned client is managed by the rule
+and can be reused across tests.
+
 .. code-block:: java
 
     public class LoginAcceptanceTest {
@@ -394,4 +398,153 @@ By creating a DropwizardTestSupport instance in your test you can manually start
 
             assertThat(response.getStatus()).isEqualTo(302);
         }
+    }
+
+.. _man-testing-commands:
+
+Testing Commands
+================
+
+:ref:`Commands <man-core-commands>` can and should be tested, as it's important to ensure arguments
+are interpreted correctly, and the output is as expected.
+
+Below is a test for a command that adds the arguments as numbers and outputs the summation to the
+console. The test ensures that the result printed to the screen is correct by capturing standard out
+before the command is ran.
+
+.. code-block:: java
+
+    public class CommandTest {
+        private final PrintStream originalOut = System.out;
+        private final PrintStream originalErr = System.err;
+        private final InputStream originalIn = System.in;
+
+        private final ByteArrayOutputStream stdOut = new ByteArrayOutputStream();
+        private final ByteArrayOutputStream stdErr = new ByteArrayOutputStream();
+        private Cli cli;
+
+        @Before
+        public void setUp() throws Exception {
+            // Setup necessary mock
+            final JarLocation location = mock(JarLocation.class);
+            when(location.getVersion()).thenReturn(Optional.of("1.0.0"));
+
+            // Add commands you want to test
+            final Bootstrap<MyConfiguration> bootstrap = new Bootstrap<>(new MyApplication());
+            bootstrap.addCommand(new MyAddCommand());
+
+            // Redirect stdout and stderr to our byte streams
+            System.setOut(new PrintStream(stdOut));
+            System.setErr(new PrintStream(stdErr));
+
+            // Build what'll run the command and interpret arguments
+            cli = new Cli(location, bootstrap, stdOut, stdErr);
+        }
+
+        @After
+        public void teardown() {
+            System.setOut(originalOut);
+            System.setErr(originalErr);
+            System.setIn(originalIn);
+        }
+
+        @Test
+        public void myAddCanAddThreeNumbersCorrectly() {
+            final boolean success = cli.run("add", "2", "3", "6");
+
+            SoftAssertions softly = new SoftAssertions();
+            softly.assertThat(success).as("Exit success").isTrue();
+
+            // Assert that 2 + 3 + 6 outputs 11
+            softly.assertThat(stdOut.toString()).as("stdout").isEqualTo("11");
+            softly.assertThat(stdErr.toString()).as("stderr").isEmpty();
+            softly.assertAll();
+        }
+    }
+
+.. _man-testing-database-interactions:
+
+Testing Database Interactions
+=============================
+
+In Dropwizard, the database access is managed via the ``@UnitOfWork`` annotation used on resource
+methods. In case you want to test database-layer code independently, a ``DAOTestRule`` is provided
+which setups a Hibernate ``SessionFactory``.
+
+.. code-block:: java
+
+    public class DatabaseTest {
+
+        @Rule
+        public DAOTestRule database = DAOTestRule.newBuilder().addEntityClass(FooEntity.class).build();
+
+        private FooDAO fooDAO;
+
+        @Before
+        public void setUp() {
+            fooDAO = new FooDAO(database.getSessionFactory());
+        }
+
+        @Test
+        public createsFoo() {
+            FooEntity fooEntity = new FooEntity("bar");
+            long id = database.inTransaction(() -> {
+                return fooDAO.save(fooEntity);
+            });
+
+            assertThat(fooEntity.getId, notNullValue());
+        }
+
+        @Test
+        public roundtripsFoo() {
+            long id = database.inTransaction(() -> {
+                return fooDAO.save(new FooEntity("baz"));
+            });
+
+            FooEntity fooEntity = fooDAO.get(id);
+
+            assertThat(fooEntity.getFoo(), equalTo("baz"));
+        }
+    }
+
+The ``DAOTestRule``
+
+* Creates a simple default Hibernate configuration using an H2 in-memory database
+* Provides a ``SessionFactory`` instance which can be passed to, e.g., a subclass of ``AbstractDAO``
+* Provides a function for executing database operations within a transaction
+
+.. _man-testing-configurations:
+
+Testing Configurations
+======================
+
+Configuration objects can be tested for correct deserialization and validation. Using the classes
+created in :ref:`polymorphic configurations <man-configuration-polymorphic>` as an example, one can
+assert the expected widget is deserialized based on the ``type`` field.
+
+.. code-block:: java
+
+    public class WidgetFactoryTest {
+        private final ObjectMapper objectMapper = Jackson.newObjectMapper();
+        private final Validator validator = Validators.newValidator();
+        private final YamlConfigurationFactory<WidgetFactory> factory =
+                new YamlConfigurationFactory<>(WidgetFactory.class, validator, objectMapper, "dw");
+
+        @Test
+        public void isDiscoverable() throws Exception {
+            // Make sure the types we specified in META-INF gets picked up
+            assertThat(new DiscoverableSubtypeResolver().getDiscoveredSubtypes())
+                    .contains(HammerFactory.class)
+                    .contains(ChiselFactory.class);
+        }
+
+        @Test
+        public void testBuildAHammer() throws Exception {
+            final File yml = new File(Resources.getResource("yaml/hammer.yml").toURI());
+            final WidgetFactory wid = factory.build(yml);
+            assertThat(wid).isInstanceOf(HammerFactory.class);
+            assertThat(((HammerFactory) wid).createWidget().getWeight()).isEqualTo(10);
+        }
+
+        // test for the chisel factory
     }

@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.io.CharStreams;
 import com.google.common.io.Resources;
-import io.dropwizard.configuration.ConfigurationFactory;
+import io.dropwizard.configuration.YamlConfigurationFactory;
 import io.dropwizard.jackson.DiscoverableSubtypeResolver;
 import io.dropwizard.jackson.Jackson;
 import io.dropwizard.jetty.HttpConnectorFactory;
@@ -30,19 +30,23 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertEquals;
 
 public class SimpleServerFactoryTest {
 
     private SimpleServerFactory http;
     private final ObjectMapper objectMapper = Jackson.newObjectMapper();
     private Validator validator = BaseValidator.newValidator();
+    private Environment environment = new Environment("testEnvironment", objectMapper, validator, new MetricRegistry(),
+            ClassLoader.getSystemClassLoader());
 
     @Before
     public void setUp() throws Exception {
         objectMapper.getSubtypeResolver().registerSubtypes(ConsoleAppenderFactory.class,
                 FileAppenderFactory.class, SyslogAppenderFactory.class, HttpConnectorFactory.class);
-        http = new ConfigurationFactory<>(SimpleServerFactory.class, validator, objectMapper, "dw")
+        http = (SimpleServerFactory) new YamlConfigurationFactory<>(ServerFactory.class, validator, objectMapper, "dw")
                 .build(new File(Resources.getResource("yaml/simple_server.yml").toURI()));
     }
 
@@ -70,8 +74,6 @@ public class SimpleServerFactoryTest {
 
     @Test
     public void testBuild() throws Exception {
-        final Environment environment = new Environment("testEnvironment", objectMapper, validator, new MetricRegistry(),
-                ClassLoader.getSystemClassLoader());
         environment.jersey().register(new TestResource());
         environment.admin().addTask(new TestTask());
 
@@ -87,12 +89,20 @@ public class SimpleServerFactoryTest {
         server.stop();
     }
 
-    private static String httpRequest(String requestMethod, String url) throws Exception {
+    @Test
+    public void testConfiguredEnvironment() {
+        http.configure(environment);
+
+        assertEquals(http.getAdminContextPath(), environment.getAdminContext().getContextPath());
+        assertEquals(http.getApplicationContextPath(), environment.getApplicationContext().getContextPath());
+    }
+
+    public static String httpRequest(String requestMethod, String url) throws Exception {
         final HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
         connection.setRequestMethod(requestMethod);
         connection.connect();
         try (InputStream inputStream = connection.getInputStream()) {
-            return CharStreams.toString(new InputStreamReader(inputStream));
+            return CharStreams.toString(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
         }
     }
 

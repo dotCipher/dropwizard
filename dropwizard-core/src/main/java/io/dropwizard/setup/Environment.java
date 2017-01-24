@@ -1,7 +1,9 @@
 package io.dropwizard.setup;
 
 import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.SharedMetricRegistries;
 import com.codahale.metrics.health.HealthCheckRegistry;
+import com.codahale.metrics.health.SharedHealthCheckRegistries;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import io.dropwizard.jersey.DropwizardResourceConfig;
@@ -54,11 +56,12 @@ public class Environment {
                        ObjectMapper objectMapper,
                        Validator validator,
                        MetricRegistry metricRegistry,
-                       ClassLoader classLoader) {
+                       ClassLoader classLoader,
+                       HealthCheckRegistry healthCheckRegistry) {
         this.name = name;
         this.objectMapper = objectMapper;
         this.metricRegistry = metricRegistry;
-        this.healthCheckRegistry = new HealthCheckRegistry();
+        this.healthCheckRegistry = healthCheckRegistry;
         this.validator = validator;
 
         this.servletContext = new MutableServletContextHandler();
@@ -84,6 +87,20 @@ public class Environment {
                 .threadFactory(new ThreadFactoryBuilder().setDaemon(true).build())
                 .rejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy())
                 .build();
+
+        SharedMetricRegistries.add("default", metricRegistry);
+        SharedHealthCheckRegistries.add("default", healthCheckRegistry);
+    }
+
+    /**
+     * Creates an environment with default health check registry
+     */
+    public Environment(String name,
+                       ObjectMapper objectMapper,
+                       Validator validator,
+                       MetricRegistry metricRegistry,
+                       ClassLoader classLoader) {
+        this(name, objectMapper, validator, metricRegistry, classLoader, new HealthCheckRegistry());
     }
 
     /**

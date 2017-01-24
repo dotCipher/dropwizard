@@ -27,9 +27,9 @@ import io.dropwizard.logging.layout.DropwizardLayoutFactory;
 import io.dropwizard.logging.layout.LayoutFactory;
 
 import javax.management.InstanceAlreadyExistsException;
-import javax.management.MalformedObjectNameException;
 import javax.management.MBeanRegistrationException;
 import javax.management.MBeanServer;
+import javax.management.MalformedObjectNameException;
 import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 import javax.validation.Valid;
@@ -55,7 +55,7 @@ public class DefaultLoggingFactory implements LoggingFactory {
 
     @Valid
     @NotNull
-    private ImmutableList<AppenderFactory<ILoggingEvent>> appenders = ImmutableList.<AppenderFactory<ILoggingEvent>>of(
+    private ImmutableList<AppenderFactory<ILoggingEvent>> appenders = ImmutableList.of(
             new ConsoleAppenderFactory<>()
     );
 
@@ -115,6 +115,7 @@ public class DefaultLoggingFactory implements LoggingFactory {
         this.appenders = ImmutableList.copyOf(appenders);
     }
 
+    @Override
     public void configure(MetricRegistry metricRegistry, String name) {
         LoggingUtil.hijackJDKLogging();
 
@@ -161,6 +162,7 @@ public class DefaultLoggingFactory implements LoggingFactory {
         configureInstrumentation(root, metricRegistry);
     }
 
+    @Override
     public void stop() {
         // Should acquire the lock to avoid concurrent listener changes
         CHANGE_LOGGER_CONTEXT_LOCK.lock();

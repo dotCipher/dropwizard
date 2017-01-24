@@ -35,7 +35,7 @@ public class GuavaOptionalLocalDateTimeTest {
         dataSourceFactory.setInitialSize(1);
         final DBI dbi = new DBIFactory().build(env, dataSourceFactory, "test");
         try (Handle h = dbi.open()) {
-            h.execute("CREATE TABLE tasks (" +
+            h.execute("CREATE TABLE IF NOT EXISTS tasks (" +
                     "id INT PRIMARY KEY, " +
                     "assignee VARCHAR(255) NOT NULL, " +
                     "start_date TIMESTAMP, " +
@@ -50,7 +50,7 @@ public class GuavaOptionalLocalDateTimeTest {
     public void testPresent() {
         final LocalDateTime startDate = LocalDateTime.now();
         final LocalDateTime endDate = startDate.plusDays(1L);
-        dao.insert(1, Optional.of("John Hughes"), startDate, Optional.of(endDate), Optional.<String>absent());
+        dao.insert(1, Optional.of("John Hughes"), startDate, Optional.of(endDate), Optional.absent());
 
         assertThat(dao.findEndDateById(1).get()).isEqualTo(endDate);
     }
@@ -58,7 +58,7 @@ public class GuavaOptionalLocalDateTimeTest {
     @Test
     public void testAbsent() {
         dao.insert(2, Optional.of("Kate Johansen"), LocalDateTime.now(),
-                Optional.<LocalDateTime>absent(), Optional.of("To be done"));
+                Optional.absent(), Optional.of("To be done"));
 
         assertThat(dao.findEndDateById(2).isPresent()).isFalse();
     }

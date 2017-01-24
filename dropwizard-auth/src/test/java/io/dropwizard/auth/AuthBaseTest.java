@@ -11,12 +11,14 @@ import org.glassfish.jersey.test.grizzly.GrizzlyWebTestContainerFactory;
 import org.glassfish.jersey.test.spi.TestContainerException;
 import org.glassfish.jersey.test.spi.TestContainerFactory;
 import org.junit.Test;
+
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.HttpHeaders;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.failBecauseExceptionWasNotThrown;
 
-public abstract class AuthBaseTest<T extends DropwizardResourceConfig> extends JerseyTest{
+public abstract class AuthBaseTest<T extends DropwizardResourceConfig> extends JerseyTest {
     protected static final String ADMIN_ROLE = "ADMIN";
     protected static final String ADMIN_USER = "good-guy";
     protected static final String ORDINARY_USER = "ordinary-guy";

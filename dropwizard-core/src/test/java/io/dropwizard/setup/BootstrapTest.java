@@ -3,6 +3,7 @@ package io.dropwizard.setup;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.UniformReservoir;
+import com.codahale.metrics.health.HealthCheckRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.dropwizard.Application;
 import io.dropwizard.Configuration;
@@ -15,7 +16,6 @@ import io.dropwizard.validation.valuehandling.GuavaOptionalValidatedValueUnwrapp
 import io.dropwizard.validation.valuehandling.OptionalDoubleValidatedValueUnwrapper;
 import io.dropwizard.validation.valuehandling.OptionalIntValidatedValueUnwrapper;
 import io.dropwizard.validation.valuehandling.OptionalLongValidatedValueUnwrapper;
-import io.dropwizard.validation.valuehandling.OptionalValidatedValueUnwrapper;
 import org.hibernate.validator.HibernateValidator;
 import org.hibernate.validator.internal.engine.ValidatorFactoryImpl;
 import org.junit.Before;
@@ -49,6 +49,12 @@ public class BootstrapTest {
     public void hasAnObjectMapper() throws Exception {
         assertThat(bootstrap.getObjectMapper())
                 .isNotNull();
+    }
+
+    @Test
+    public void hasHealthCheckRegistry() {
+        assertThat(bootstrap.getHealthCheckRegistry())
+            .isNotNull();
     }
 
     @Test
@@ -98,7 +104,7 @@ public class BootstrapTest {
     public void defaultsToDefaultValidatorFactory() throws Exception {
         assertThat(bootstrap.getValidatorFactory()).isInstanceOf(ValidatorFactoryImpl.class);
 
-        ValidatorFactoryImpl validatorFactory = (ValidatorFactoryImpl)bootstrap.getValidatorFactory();
+        ValidatorFactoryImpl validatorFactory = (ValidatorFactoryImpl) bootstrap.getValidatorFactory();
 
         // It's imperative that the NonEmptyString validator come before the general param validator
         // because a NonEmptyString is a param that wraps an optional and the Hibernate Validator
@@ -107,7 +113,6 @@ public class BootstrapTest {
         assertThat(validatorFactory.getValidatedValueHandlers())
                 .extractingResultOf("getClass")
                 .containsSubsequence(GuavaOptionalValidatedValueUnwrapper.class,
-                                     OptionalValidatedValueUnwrapper.class,
                                      OptionalDoubleValidatedValueUnwrapper.class,
                                      OptionalIntValidatedValueUnwrapper.class,
                                      OptionalLongValidatedValueUnwrapper.class,
@@ -132,4 +137,12 @@ public class BootstrapTest {
         bootstrap.setObjectMapper(minimalObjectMapper);
         assertThat(bootstrap.getObjectMapper()).isSameAs(minimalObjectMapper);
     }
+
+    @Test
+    public void canUseCustomHealthCheckRegistry() {
+        final HealthCheckRegistry healthCheckRegistry = new HealthCheckRegistry();
+        bootstrap.setHealthCheckRegistry(healthCheckRegistry);
+        assertThat(bootstrap.getHealthCheckRegistry()).isSameAs(healthCheckRegistry);
+    }
+
 }

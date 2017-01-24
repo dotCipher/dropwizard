@@ -151,6 +151,37 @@ throw an exception, else use ``@DefaultValue`` or move the ``Optional`` into the
         // ...
     }
 
+.. _man-validation-validations-enum-constraints:
+
+Enum Constraints
+****************
+
+Given the following enum:
+
+.. code-block:: java
+
+    public enum Choice {
+        OptionA,
+        OptionB,
+        OptionC
+    }
+
+And the endpoint:
+
+.. code-block:: java
+
+    @GET
+    public String getEnum(@NotNull @QueryParam("choice") Choice choice) {
+        return choice.toString();
+    }
+
+One can expect Dropwizard not only to ensure that the query parameter exists, but to also provide
+the client a list of valid options ``query param choice must be one of [OptionA, OptionB, OptionC]``
+when an invalid parameter is provided. The enum that the query parameter is deserialized into is
+first attempted on the enum's ``name()`` field and then ``toString()``. During the case insensitive
+comparisons, the query parameter has whitespace removed with dashes and dots normalized to
+underscores. This logic is also used when deserializing request body's that contain enums.
+
 .. _man-validation-validations-return-value-validations:
 
 Return Value Validations
@@ -175,6 +206,68 @@ knows the server failed through no fault of their own.
 
 Analogous to an empty request body, an empty entity annotated with ``@NotNull`` will return ``server
 response may not be null``
+
+.. _man-validation-limitations:
+
+Limitations
+===========
+
+Jersey allows for ``BeanParam`` to have setters with ``*Param`` annotations. While nice for simple
+transformations it does obstruct validation, so clients won't receive as instructive of error
+messages. The following example shows the behavior:
+
+.. code-block:: java
+
+    @Path("/root")
+    @Produces(MediaType.APPLICATION_JSON)
+    public class Resource {
+
+        @GET
+        @Path("params")
+        public String getBean(@Valid @BeanParam MyBeanParams params) {
+            return params.getField();
+        }
+
+        public static class MyBeanParams {
+            @NotEmpty
+            private String field;
+
+            public String getField() {
+                return field;
+            }
+
+            @QueryParam("foo")
+            public void setField(String field) {
+                this.field = Strings.nullToEmpty(field).trim();
+            }
+        }
+    }
+
+A client submitting the query parameter ``foo`` as blank will receive the following error message:
+
+.. code-block:: json
+
+    {"errors":["getBean.arg0.field may not be empty"]}
+
+Workarounds include:
+
+* Name ``BeanParam`` fields the same as the ``*Param`` annotation values
+* Supply validation message on annotation: ``@NotEmpty(message = "query param foo must not be empty")``
+* Perform transformations and validations on ``*Param`` inside endpoint
+
+The same kind of limitation applies for :ref:`Configuration <man-core-configuration>` objects:
+
+.. code-block:: java
+
+    public class MyConfiguration extends Configuration {
+        @NotNull
+        @JsonProperty("foo")
+        private String baz;
+    }
+
+Even though the property's name is ``foo``, the error when property is null will be::
+
+  * baz may not be null
 
 Annotations
 ===========
@@ -308,8 +401,7 @@ code and ensure that the error messages are user friendly.
     public void personNeedsAName() {
         // Tests what happens when a person with a null name is sent to
         // the endpoint.
-        final Response post = resources.client()
-                .target("/person/v1").request()
+        final Response post = resources.target("/person/v1").request()
                 .post(Entity.json(new Person(null)));
 
         // Clients will receive a 422 on bad request entity
@@ -326,15 +418,36 @@ code and ensure that the error messages are user friendly.
 Extending
 =========
 
-While Dropwizard provides good defaults for error messages, one size may not fit all and so there
-are a series of extension points. To register your own
-``ExceptionMapper<JerseyViolationException>`` you'll need to first set
-``registerDefaultExceptionMappers`` to false in the configuration file or in code before registering
-your exception mapper with jersey. Then, optionally, register other default exception mappers:
+While Dropwizard provides good defaults for validation error messages, one can customize the
+response through an ``ExceptionMapper<JerseyViolationException>``:
 
-* ``LoggingExceptionMapper<Throwable>``
-* ``JsonProcessingExceptionMapper``
-* ``EarlyEofExceptionMapper``
+.. code-block:: java
+
+    /** Return a generic response depending on if it is a client or server error */
+    public class MyJerseyViolationExceptionMapper implements ExceptionMapper<JerseyViolationException> {
+        @Override
+        public Response toResponse(final JerseyViolationException exception) {
+            final Set<ConstraintViolation<?>> violations = exception.getConstraintViolations();
+            final Invocable invocable = exception.getInvocable();
+            final int status = ConstraintMessage.determineStatus(violations, invocable);
+            return Response.status(status)
+                    .type(MediaType.TEXT_PLAIN_TYPE)
+                    .entity(status >= 500 ? "Server error" : "Client error")
+                    .build();
+        }
+    }
+
+To register ``MyJerseyViolationExceptionMapper`` and have it override the default:
+
+.. code-block:: java
+
+    @Override
+    public void run(final MyConfiguration conf, final Environment env) {
+        env.jersey().register(new MyJerseyViolationExceptionMapper());
+        env.jersey().register(new Resource());
+    }
+
+Dropwizard calculates the validation error message through ``ConstraintMessage.getMessage``.
 
 If you need to validate entities outside of resource endpoints, the validator can be accessed in the
 ``Environment`` when the application is first ran.
@@ -343,9 +456,3 @@ If you need to validate entities outside of resource endpoints, the validator ca
 
     Validator validator = environment.getValidator();
     Set<ConstraintViolation> errors = validator.validate(/* instance of class */)
-
-The method used to determine what status code to return based on violations is
-``ConstraintViolations.determineStatus``
-
-The method used to determine the human friendly error message due to a constraint violation is
-``ConstraintMessage.getMessage``.
